@@ -1,4 +1,4 @@
-# Updated Streamlit app with contact info extraction and fallback input fields
+# Complete Streamlit Cover Letter Generator
 import streamlit as st
 import google.generativeai as genai
 from PyPDF2 import PdfReader
@@ -23,6 +23,21 @@ st.set_page_config(page_title="Cover Letter Generator", page_icon="📝", layout
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     st.error("❌ GEMINI_API_KEY not found in environment variables!")
+    st.markdown("""
+    ### 🔧 Setup Required:
+    
+    **1. Create a `.env` file in your project root:**
+    ```
+    GEMINI_API_KEY=your_api_key_here
+    ```
+    
+    **2. Get your Gemini API Key:**
+    - Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+    - Create a new API key (free)
+    - Copy and paste it to your `.env` file
+    
+    **3. Restart the application**
+    """)
     st.stop()
 
 try:
@@ -36,6 +51,7 @@ st.title("📝 Cover Letter Generator")
 st.markdown("Generate professional cover letters using **Gemini 2.0 Flash**")
 
 def extract_text_from_pdf(pdf_file):
+    """Extract text from PDF file"""
     try:
         reader = PdfReader(pdf_file)
         return "\n".join(page.extract_text() for page in reader.pages if page.extract_text())
@@ -44,6 +60,7 @@ def extract_text_from_pdf(pdf_file):
         return ""
 
 def extract_text_from_docx(docx_file):
+    """Extract text from DOCX file"""
     try:
         doc = docx.Document(docx_file)
         return "\n".join(p.text for p in doc.paragraphs)
@@ -52,6 +69,7 @@ def extract_text_from_docx(docx_file):
         return ""
 
 def extract_text_from_file(uploaded_file):
+    """Extract text from uploaded file based on type"""
     if uploaded_file.type == "application/pdf":
         return extract_text_from_pdf(uploaded_file)
     elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
@@ -63,6 +81,7 @@ def extract_text_from_file(uploaded_file):
         return ""
 
 def extract_contact_info(text):
+    """Extract contact information from CV text"""
     email = re.search(r"[\w\.-]+@[\w\.-]+", text)
     phone = re.search(r"(?<!\d)(\+62|08|62)[\d\s\-]{8,}(?!\d)", text)
     name_lines = text.strip().splitlines()[:10]  # Assume name is at the top
@@ -71,12 +90,17 @@ def extract_contact_info(text):
 
 def clean_metadata(text):
     """Remove all metadata in square brackets from text"""
-    import re
+    if not text:
+        return ""
     # Remove anything between square brackets including the brackets
     cleaned_text = re.sub(r'\[.*?\]', '', text)
     # Remove extra whitespace and newlines that might be left
     cleaned_text = re.sub(r'\n\s*\n', '\n\n', cleaned_text)
-    cleaned_text = re.sub(r'^\s+|\s+
+    cleaned_text = re.sub(r'^\s+|\s+$', '', cleaned_text, flags=re.MULTILINE)
+    return cleaned_text.strip()
+
+def generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_len, name, email, phone, hr_name, hr_role, bahasa):
+    """Generate cover letter using Gemini AI"""
     today_date = datetime.now().strftime("%d %B %Y")
     hr_info = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name if hr_name else "the Hiring Manager"
     
@@ -263,46 +287,98 @@ def create_pdf(text):
         st.error(f"Error creating PDF: {str(e)}")
         return None
 
-# --- UI STARTS HERE ---
+# Sidebar with information
+with st.sidebar:
+    if api_key:
+        st.success("🔑 API Key loaded from .env")
+    
+    st.markdown("---")
+    st.header("ℹ️ About")
+    st.markdown("**Powered by Gemini 2.0 Flash**")
+    st.markdown("This tool generates personalized cover letters by analyzing your CV and the job requirements.")
+    
+    st.markdown("---")
+    st.header("📋 How to Use")
+    st.markdown("""
+    1. **Upload your CV/Resume**
+    2. **Fill in contact information**
+    3. **Enter job details**
+    4. **Set preferences**
+    5. **Generate cover letter**
+    6. **Download as TXT or PDF**
+    """)
+    
+    st.markdown("---")
+    st.header("💡 Tips")
+    st.markdown("""
+    • Use a detailed CV with achievements
+    • Provide complete job description
+    • Include specific requirements
+    • Review and customize output
+    • Check for any placeholder text
+    """)
+
+# --- MAIN UI STARTS HERE ---
 cv_file = st.file_uploader("📄 Upload your CV (PDF/DOCX/TXT)", type=["pdf", "docx", "txt"])
 
 if cv_file:
+    # Extract text and contact info
     cv_text = extract_text_from_file(cv_file)
     name, email, phone = extract_contact_info(cv_text)
+    
+    if cv_text:
+        st.success("✅ CV uploaded successfully!")
+        
+        # Show extracted text preview
+        with st.expander("📖 Preview CV Content"):
+            st.text_area("Extracted Text", cv_text[:1000] + "..." if len(cv_text) > 1000 else cv_text, height=200, disabled=True)
 
     # Contact Information Section
     st.subheader("👤 Contact Information")
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        name = st.text_input("Your Name", value=name if name else "", key="name_input")
+        name = st.text_input("Your Name", value=name if name else "", key="name_input", help="Full name as it appears on your CV")
     with col2:
-        email = st.text_input("Your Email", value=email if email else "", key="email_input")
+        email = st.text_input("Your Email", value=email if email else "", key="email_input", help="Professional email address")
     with col3:
-        phone = st.text_input("Your Phone Number", value=phone if phone else "", key="phone_input")
+        phone = st.text_input("Your Phone Number", value=phone if phone else "", key="phone_input", help="Contact phone number")
 
     # Job Information Section
     st.subheader("💼 Job Information")
-    job_title = st.text_input("Job Title", key="job_title_input")
-    company = st.text_input("Company Name", key="company_input")
-    job_desc = st.text_area("Job Description", key="job_desc_input")
-    job_reqs = st.text_area("Job Requirements", key="job_reqs_input")
+    job_title = st.text_input("Job Title", key="job_title_input", help="Exact job title from the posting")
+    company = st.text_input("Company Name", key="company_input", help="Full company name")
+    job_desc = st.text_area("Job Description", key="job_desc_input", height=150, help="Complete job description including responsibilities")
+    job_reqs = st.text_area("Job Requirements", key="job_reqs_input", height=150, help="Specific requirements, skills, and qualifications needed")
     
     # Additional Settings
     st.subheader("⚙️ Settings")
     col1, col2 = st.columns(2)
     
     with col1:
-        word_len = st.slider("Word Count", 30, 500, 70, 10, key="word_len_input")
+        word_len = st.slider("Target Word Count", 50, 500, 250, 10, key="word_len_input", help="Approximate length of cover letter")
         bahasa = st.selectbox("Cover Letter Language", ["English", "Bahasa Indonesia"], key="bahasa_input")
     
     with col2:
-        hr_name = st.text_input("HR Name (optional)", key="hr_name_input")
-        hr_role = st.text_input("HR Role (optional)", key="hr_role_input")
+        hr_name = st.text_input("HR Name (optional)", key="hr_name_input", help="Name of hiring manager or recruiter")
+        hr_role = st.text_input("HR Role (optional)", key="hr_role_input", help="Title of hiring manager or recruiter")
 
-    if st.button("✨ Generate Cover Letter", type="primary"):
-        if all([name, email, phone, job_title, company, job_desc, job_reqs]):
-            with st.spinner("Generating cover letter..."):
+    # Generate button
+    if st.button("✨ Generate Cover Letter", type="primary", use_container_width=True):
+        # Validate required fields
+        missing_fields = []
+        if not name: missing_fields.append("Name")
+        if not email: missing_fields.append("Email")
+        if not phone: missing_fields.append("Phone")
+        if not job_title: missing_fields.append("Job Title")
+        if not company: missing_fields.append("Company Name")
+        if not job_desc: missing_fields.append("Job Description")
+        if not job_reqs: missing_fields.append("Job Requirements")
+        
+        if missing_fields:
+            st.error(f"❗ Please complete the following required fields: {', '.join(missing_fields)}")
+        else:
+            with st.spinner("🤖 Generating your personalized cover letter..."):
                 try:
                     result = generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_len, name, email, phone, hr_name, hr_role, bahasa)
                     
@@ -310,13 +386,12 @@ if cv_file:
                     st.session_state.cover_letter = result
                     st.session_state.company_name = company
                     st.session_state.applicant_name = name
+                    st.session_state.job_title = job_title
                     
                     st.success("✅ Cover letter generated successfully!")
                     
                 except Exception as e:
-                    st.error(f"Error generating cover letter: {str(e)}")
-        else:
-            st.warning("❗ Please complete all required fields.")
+                    st.error(f"❌ Error generating cover letter: {str(e)}")
 
 # Display generated cover letter
 if hasattr(st.session_state, 'cover_letter') and st.session_state.cover_letter:
@@ -326,16 +401,32 @@ if hasattr(st.session_state, 'cover_letter') and st.session_state.cover_letter:
     # Display the cover letter
     st.text_area("Preview", st.session_state.cover_letter, height=400, key="cover_letter_preview")
     
+    # Statistics
+    words = len(st.session_state.cover_letter.split())
+    chars = len(st.session_state.cover_letter)
+    paragraphs = st.session_state.cover_letter.count('\n\n') + 1
+    
+    col_stat1, col_stat2, col_stat3 = st.columns(3)
+    with col_stat1:
+        st.metric("Words", words)
+    with col_stat2:
+        st.metric("Characters", chars)
+    with col_stat3:
+        st.metric("Paragraphs", paragraphs)
+    
     # Download buttons
-    col1, col2 = st.columns(2)
+    st.subheader("📥 Download Options")
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         # TXT Download
+        filename_safe = f"Cover_Letter_{st.session_state.applicant_name.replace(' ', '_')}_{st.session_state.company_name.replace(' ', '_')}.txt"
         st.download_button(
-            "📥 Download TXT",
+            "📄 Download TXT",
             data=st.session_state.cover_letter,
-            file_name=f"Cover_Letter_{st.session_state.applicant_name}_{st.session_state.company_name}.txt",
-            mime="text/plain"
+            file_name=filename_safe,
+            mime="text/plain",
+            use_container_width=True
         )
     
     with col2:
@@ -345,264 +436,58 @@ if hasattr(st.session_state, 'cover_letter') and st.session_state.cover_letter:
             if pdf_buffer:
                 pdf_data = pdf_buffer.getvalue()
                 if len(pdf_data) > 1000:  # Check if PDF has substantial content
+                    filename_pdf = f"Cover_Letter_{st.session_state.applicant_name.replace(' ', '_')}_{st.session_state.company_name.replace(' ', '_')}.pdf"
                     st.download_button(
-                        "📥 Download PDF",
+                        "📑 Download PDF",
                         data=pdf_data,
-                        file_name=f"Cover_Letter_{st.session_state.applicant_name}_{st.session_state.company_name}.pdf",
-                        mime="application/pdf"
+                        file_name=filename_pdf,
+                        mime="application/pdf",
+                        use_container_width=True
                     )
                 else:
-                    st.error("Generated PDF appears to be empty or corrupted")
+                    st.error("Generated PDF appears to be empty")
             else:
                 st.error("Failed to create PDF")
         except Exception as e:
             st.error(f"PDF creation error: {str(e)}")
+    
+    with col3:
+        # Copy to clipboard helper
+        if st.button("📋 Show for Copy", use_container_width=True):
+            st.code(st.session_state.cover_letter, language=None)
+            st.info("💡 Select the text above and copy it (Ctrl+C / Cmd+C)")
             
-    # Debug information
-    if st.checkbox("Show Debug Info"):
+    # Debug information (optional)
+    if st.checkbox("🔍 Show Debug Info"):
         st.subheader("Debug Information")
         st.write(f"Cover letter length: {len(st.session_state.cover_letter)} characters")
         st.write(f"Contains brackets: {'[' in st.session_state.cover_letter}")
         if '[' in st.session_state.cover_letter:
-            import re
             brackets = re.findall(r'\[.*?\]', st.session_state.cover_letter)
             st.write(f"Brackets found: {brackets}")
         
         # Show cleaned version
         cleaned_version = clean_metadata(st.session_state.cover_letter)
-        st.text_area("Cleaned Version", cleaned_version, height=200)
-, '', cleaned_text, flags=re.MULTILINE)
-    return cleaned_text.strip()
-
-def generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_len, name, email, phone, hr_name, hr_role, bahasa):
-    today_date = datetime.now().strftime("%d %B %Y")
-    hr_info = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name if hr_name else "the Hiring Manager"
-    
-    # Set language instruction
-    language_instruction = "Indonesian (Bahasa Indonesia)" if bahasa == "Bahasa Indonesia" else "English"
-    
-    prompt = f"""
-    You are a professional cover letter writer. Your task is to create an engaging, professional, and highly customized cover letter based on the provided information.
-    
-    **Use today's date:** {today_date}
-    
-    **Applicant Information:**
-    - Full Name: {name}
-    - Email: {email}
-    - Phone Number: {phone}
-    
-    **CV (Resume) Content:**
-    {cv_text}
-    *(Note to AI: Analyze this CV text thoroughly to identify experience, skills, achievements, and qualifications relevant to the job being applied for. Don't just copy; extract and synthesize the most relevant information.)*
-    
-    **Job Information:**
-    - Position Title: {job_title}
-    - Company Name: {company}
-    - Job Description: {job_desc}
-    - Job Requirements: {job_reqs}
-    
-    **Additional Information (Optional):**
-    - To (Letter Recipient/HR): {hr_info} *(If empty, greet with "Dear Hiring Manager," or "Dear Recruitment Team,")*
-    - Estimated Word Length: {word_len} *(Target around this number, flexibility of +/- 15% is allowed)*
-    
-    **Main Guidelines for Cover Letter Creation:**
-
-    Use {language_instruction} language throughout the cover letter.
-    
-    1.  **Professional Letter Format:**
-        *   **Header Section:**
-            *   Applicant contact information ({name}, {email}, {phone}) should be clear at the top.
-            *   Today's date ({today_date}).
-            *   Recipient information (if {hr_info} provides specific name/title, use that. Otherwise, just company name {company} and address if available).
-        *   **Opening Salutation:**
-            *   Greet recipient specifically if {hr_info} provides a name (e.g., "Dear Mr. [Last Name]," or "Dear Ms. [Last Name],").
-            *   If {hr_info} is empty or generic, use general greeting (e.g., "Dear Recruitment Team at {company}," or "Dear Hiring Manager,"). Avoid "To Whom It May Concern" if possible.
-        *   **Body Content (Core Content and Flow):**
-            *   **Start the letter** by stating your enthusiasm and briefly explaining why you believe you are a strong candidate for the role.
-            *   **The core of the letter should focus on matching your qualifications with job needs.** This is the crucial section.
-                *   Identify 2-3 main requirements or responsibilities from {job_reqs} and {job_desc}.
-                *   For each point raised, **show, don't just tell.** Explain how specific experience, skills, or achievements from the applicant's {cv_text} are directly relevant and meet those requirements. Use concrete examples from the CV.
-                *   **Quantify achievements** if possible (e.g., "successfully increased process efficiency by 15% within 6 months").
-                *   Emphasize how the applicant's contributions can **add value** to {company}.
-            *   **(Optional but highly recommended if information is available or can be inferred)** Briefly explain the applicant's **specific motivation** for joining {company} (e.g., interest in company mission, values, innovative products, or industry reputation). You can also mention how the applicant sees themselves **fitting with the company culture**, if there are indications.
-            *   **Close the letter** by reiterating your enthusiasm for the position. Mention your availability for further discussion and include a **polite and clear call to action** (e.g., "I am very excited to discuss further how my qualifications can support your team's success at {company}. Thank you for your time and consideration.").
-        *   **Closing Salutation:** Use professional closing like "Sincerely," or "Best regards,".
-        *   **Signature:** Applicant's full name ({name}).
-    
-    2.  **Tone and Style:**
-        *   **Professional and Enthusiastic:** Tone should show confidence, professionalism, and genuine enthusiasm for the role and company.
-        *   **Clear and Concise Language:** Use language that's easy to understand, avoid unnecessary jargon unless common in the industry. Sentences should be effective and to the point.
-        *   **Proactive and Solution-Oriented:** Frame experience as ways you solve problems or achieve goals.
-    
-    3.  **Customized Content (Very Important!):**
-        *   **Avoid Generic Statements:** Don't use cliché phrases or general statements that could apply to any job (e.g., "I am a hard worker," "I am a quick learner" without supporting evidence from CV).
-        *   **Avoid Excessive/Unfounded Claims:** All claims about skills and experience must be supported by or can be inferred from {cv_text}.
-        *   **Focus on Company Needs:** The cover letter should demonstrate understanding of what {company} is looking for (based on {job_desc} and {job_reqs}) and how the applicant can meet those needs.
-    
-    4.  **Technical Details:**
-        *   **Use Real Contact Details:** Ensure all applicant contact details ({name}, {email}, {phone}) are used accurately and are NOT placeholders like "[Your Name]", "[Your Email]", or "[Your Phone]".
-        *   **Word Length:** Try to approach {word_len} words. Quality and relevance are more important than rigid word count.
-        *   **Grammar and Spelling:** Ensure free from grammar and spelling errors.
-    
-    **Expected Output:**
-    Complete cover letter text, ready to copy and paste. Ensure no instructions or metadata from this prompt are included in the final output.
-    
-    CRITICAL: Do not include any placeholder text in square brackets like [Your Name], [Date], [Company Name], etc. Use the actual provided information: {name}, {email}, {phone}, {today_date}, {company}, etc.
-    
-    Remove any metadata that starts with [ and ends with ].
-    """
-    
-    model = genai.GenerativeModel("gemini-2.0-flash")
-    response = model.generate_content(prompt)
-    return response.text
-
-def create_pdf(text):
-    """Create PDF from text with proper formatting"""
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, 
-                          rightMargin=72, leftMargin=72, 
-                          topMargin=72, bottomMargin=72)
-    
-    # Get styles
-    styles = getSampleStyleSheet()
-    
-    # Create custom style for body text
-    body_style = ParagraphStyle(
-        'CustomBody',
-        parent=styles['Normal'],
-        fontSize=11,
-        leading=14,
-        alignment=TA_JUSTIFY,
-        spaceAfter=12
-    )
-    
-    # Build story
-    story = []
-    
-    # Clean and process the text
-    if text:
-        # Split text into paragraphs (by double newlines or single newlines)
-        paragraphs = text.split('\n\n')
-        if len(paragraphs) == 1:  # If no double newlines, split by single newlines
-            paragraphs = text.split('\n')
+        st.text_area("Cleaned Version Preview", cleaned_version[:500] + "..." if len(cleaned_version) > 500 else cleaned_version, height=150)
         
-        for para in paragraphs:
-            if para.strip():  # Only add non-empty paragraphs
-                # Clean the paragraph text
-                clean_para = para.strip()
-                if clean_para:
-                    try:
-                        # Create paragraph with proper encoding
-                        paragraph = Paragraph(clean_para, body_style)
-                        story.append(paragraph)
-                        story.append(Spacer(1, 12))
-                    except Exception as e:
-                        # If there's an encoding issue, try to clean the text further
-                        clean_para = clean_para.encode('utf-8', 'ignore').decode('utf-8')
-                        paragraph = Paragraph(clean_para, body_style)
-                        story.append(paragraph)
-                        story.append(Spacer(1, 12))
+else:
+    # Default information when no cover letter is generated
+    st.info("👆 Upload your CV and fill in the job information above to generate a personalized cover letter.")
     
-    # Build PDF
-    try:
-        doc.build(story)
-        buffer.seek(0)
-        return buffer
-    except Exception as e:
-        st.error(f"Error creating PDF: {str(e)}")
-        return None
+    st.subheader("✨ What You'll Get")
+    st.markdown("""
+    - **Professional Format**: Proper business letter structure with header, salutation, and closing
+    - **Personalized Content**: Tailored to your CV and the specific job requirements
+    - **Skills Matching**: Highlights your relevant experience and achievements
+    - **Company-Specific**: Shows genuine interest and research about the company
+    - **Multiple Languages**: Support for English and Bahasa Indonesia
+    - **Multiple Formats**: Download as TXT or PDF
+    - **Clean Output**: No placeholder text or metadata
+    """)
 
-# --- UI STARTS HERE ---
-cv_file = st.file_uploader("📄 Upload your CV (PDF/DOCX/TXT)", type=["pdf", "docx", "txt"])
-
-if cv_file:
-    cv_text = extract_text_from_file(cv_file)
-    name, email, phone = extract_contact_info(cv_text)
-
-    # Contact Information Section
-    st.subheader("👤 Contact Information")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        name = st.text_input("Your Name", value=name if name else "", key="name_input")
-    with col2:
-        email = st.text_input("Your Email", value=email if email else "", key="email_input")
-    with col3:
-        phone = st.text_input("Your Phone Number", value=phone if phone else "", key="phone_input")
-
-    # Job Information Section
-    st.subheader("💼 Job Information")
-    job_title = st.text_input("Job Title", key="job_title_input")
-    company = st.text_input("Company Name", key="company_input")
-    job_desc = st.text_area("Job Description", key="job_desc_input")
-    job_reqs = st.text_area("Job Requirements", key="job_reqs_input")
-    
-    # Additional Settings
-    st.subheader("⚙️ Settings")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        word_len = st.slider("Word Count", 30, 500, 70, 10, key="word_len_input")
-        bahasa = st.selectbox("Cover Letter Language", ["English", "Bahasa Indonesia"], key="bahasa_input")
-    
-    with col2:
-        hr_name = st.text_input("HR Name (optional)", key="hr_name_input")
-        hr_role = st.text_input("HR Role (optional)", key="hr_role_input")
-
-    if st.button("✨ Generate Cover Letter", type="primary"):
-        if all([name, email, phone, job_title, company, job_desc, job_reqs]):
-            with st.spinner("Generating cover letter..."):
-                try:
-                    result = generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_len, name, email, phone, hr_name, hr_role, bahasa)
-                    
-                    # Store in session state
-                    st.session_state.cover_letter = result
-                    st.session_state.company_name = company
-                    st.session_state.applicant_name = name
-                    
-                    st.success("✅ Cover letter generated successfully!")
-                    
-                except Exception as e:
-                    st.error(f"Error generating cover letter: {str(e)}")
-        else:
-            st.warning("❗ Please complete all required fields.")
-
-# Display generated cover letter
-if hasattr(st.session_state, 'cover_letter') and st.session_state.cover_letter:
-    st.markdown("---")
-    st.subheader("📄 Your Cover Letter")
-    
-    # Display the cover letter
-    st.text_area("Preview", st.session_state.cover_letter, height=400, key="cover_letter_preview")
-    
-    # Download buttons
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # TXT Download
-        st.download_button(
-            "📥 Download TXT",
-            data=st.session_state.cover_letter,
-            file_name=f"Cover_Letter_{st.session_state.applicant_name}_{st.session_state.company_name}.txt",
-            mime="text/plain"
-        )
-    
-    with col2:
-        # PDF Download
-        try:
-            pdf_buffer = create_pdf(st.session_state.cover_letter)
-            if pdf_buffer:
-                st.download_button(
-                    "📥 Download PDF",
-                    data=pdf_buffer.getvalue(),
-                    file_name=f"Cover_Letter_{st.session_state.applicant_name}_{st.session_state.company_name}.pdf",
-                    mime="application/pdf"
-                )
-            else:
-                st.error("Failed to create PDF")
-        except Exception as e:
-            st.error(f"PDF creation error: {str(e)}")
-
+# Footer
+st.markdown("---")
+st.markdown("**💡 Pro Tip**: Always review and customize the generated cover letter before sending. Add specific details about why you're interested in the company and role.")
 
 
 
