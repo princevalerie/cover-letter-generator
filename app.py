@@ -116,7 +116,7 @@ You are a professional cover letter writer. Your task is to create an engaging, 
 
     CRITICAL INSTRUCTIONS:
     1. Do not include any placeholder text in square brackets like [Your Name], [Date], [Company Name], [Your Email], [Your Phone], etc. 
-    2. Use the actual provided information: {name}, {email}, {phone}, {today_date}, {company}, etc.
+    2. Use the actual provided information: {name}, {email}, {phone}, {today}, {company}, etc.
     3. Do not include any metadata, instructions, or notes in square brackets in the final output.
     4. The output should be a clean, professional cover letter ready for immediate use.
     5. Remove any text that appears in square brackets [ ] completely from the final output.
