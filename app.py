@@ -104,7 +104,6 @@ You are a professional cover letter writer. Your task is to create an engaging, 
 - Address to: **{hr_line}**
 
 📝 **Structure & Tone:**
-1. **Header:** Applicant's contact, date, and recipient/company details.
 2. **Salutation:** Use specific name if given (e.g., "Dear Mr./Ms. X"), or "Dear Hiring Manager".
 3. **Intro:** Show enthusiasm and suitability for the role.
 4. **Body:**
@@ -116,8 +115,8 @@ You are a professional cover letter writer. Your task is to create an engaging, 
 7. **Signature:** Full name
 
     CRITICAL INSTRUCTIONS:
-    1. Do not include any placeholder text in square brackets like [Your Name], [Date], [Company Name], [Your Email], [Your Phone], etc. 
-    2. Use the actual provided information: {name}, {email}, {phone}, {today}, {company}, etc.
+    1. Do not include any placeholder text in square brackets like , [Date], [Company Name],, etc. 
+    2. Use the actual provided information: {company}, etc.
     3. Do not include any metadata, instructions, or notes in square brackets in the final output.
     4. The output should be a clean, professional cover letter ready for immediate use.
     5. Remove any text that appears in square brackets [ ] completely from the final output.
