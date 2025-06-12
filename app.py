@@ -65,15 +65,13 @@ def extract_text(file):
         return str(file.read(), "utf-8")
     return ""
 
-def generate_prompt(cv_text, name, email, phone):
+def generate_prompt(cv_text):
     today = datetime.now().strftime("%d %B %Y")
     hr_line = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Team"
     lang = "Indonesian (Bahasa Indonesia)" if language == "Bahasa Indonesia" else "English"
 
     return f"""
 You are a professional cover letter writer. Your task is to create an engaging, professional, and customized cover letter using the following:
-
-📅 **Date:** {today}
 
 📄 **Resume (analyze for achievements, skills, and experiences):**
 {cv_text}
@@ -100,14 +98,11 @@ You are a professional cover letter writer. Your task is to create an engaging, 
 6. **Closing:** Reaffirm interest and politely invite follow-up.
 7. **Signature:** Full name
 
-    CRITICAL INSTRUCTIONS:
-    1. Do not include any placeholder text in square brackets like , [Date], [Company Name],, etc. 
-    2. Use the actual provided information: {company}, etc.
-    3. Do not include any metadata, instructions, or notes in square brackets in the final output.
-    4. The output should be a clean, professional cover letter ready for immediate use.
-    5. Remove any text that appears in square brackets [ ] completely from the final output.
-    6. Always structure the paragrapgh and text allignment like professional cover letter
-    7. Do not include any address and instruction to fill the address
+CRITICAL INSTRUCTIONS:
+1. Do not include any placeholder text in square brackets.
+2. Do not include any contact details or addresses.
+3. The output should be a clean, professional cover letter ready for immediate use.
+4. Always structure the paragraph and align text like a professional letter.
 
 📌 Avoid copying the CV. Instead, synthesize and write a flowing, impactful letter.
 """
