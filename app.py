@@ -107,7 +107,7 @@ def generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_
             *   Sapa penerima secara spesifik jika {hr_info} menyediakan nama (misalnya, "Yth. Bapak [Nama Belakang]," atau "Dear Ms. [Last Name],").
             *   Jika {hr_info} kosong, umum (misalnya "Yth. Tim Rekrutmen di {company}," atau "Dear Hiring Manager,"). Hindari "To Whom It May Concern" jika memungkinkan.
         *   **Isi Surat (Konten Inti dan Alur):**
-            *   **Awali surat** dengan menyebutkan posisi ({job_title}) yang dilamar dan di mana Anda melihat lowongan tersebut (jika informasi ini ada atau dapat diasumsikan secara umum, misal "website perusahaan"). Nyatakan antusiasme Anda dan secara singkat mengapa Anda yakin merupakan kandidat yang kuat untuk peran tersebut.
+            *   **Awali surat**  Nyatakan antusiasme Anda dan secara singkat mengapa Anda yakin merupakan kandidat yang kuat untuk peran tersebut.
             *   **Bagian inti surat harus berfokus pada penyesuaian kualifikasi Anda dengan kebutuhan pekerjaan.** Ini adalah bagian krusial.
                 *   Identifikasi 2-3 persyaratan atau tanggung jawab utama dari {job_reqs} dan {job_desc}.
                 *   Untuk setiap poin yang diangkat, **tunjukkan, jangan hanya mengatakan.** Jelaskan bagaimana pengalaman, keterampilan, atau pencapaian spesifik dari {cv_text} pelamar secara langsung relevan dan memenuhi persyaratan tersebut. Gunakan contoh konkret dari CV.
@@ -170,7 +170,7 @@ if cv_file:
     company = st.text_input("Company Name")
     job_desc = st.text_area("Job Description")
     job_reqs = st.text_area("Job Requirements")
-    word_len = st.slider("Word Count", 150, 500, 250, 50)
+    word_len = st.slider("Word Count", 30, 500, 250, 10)
     hr_name = st.text_input("HR Name (optional)")
     hr_role = st.text_input("HR Role (optional)")
 
