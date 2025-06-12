@@ -165,8 +165,7 @@ if submitted and cv_file:
     else:
         st.warning("Please complete the missing contact information.")
 else:
-    st.info("👆 Please fill out the form and upload your CV to generate a cover letter.")
-
+    
 
 
 
