@@ -67,26 +67,27 @@ def extract_text(file):
         return str(file.read(), "utf-8")
     return ""
 
-def extract_contact_info(text):
-    email = re.search(r"[\w\.-]+@[\w\.-]+", text)
-    phone = re.search(r"(?<!\d)(\+62|08|62)[\d\s\-]{8,}(?!\d)", text)
-    name = next((line.strip() for line in text.splitlines()[:10] if line and line[0].isupper()), None)
-    return name, email.group() if email else "", phone.group() if phone else ""
+# def extract_contact_info(text):
+#     email = re.search(r"[\w\.-]+@[\w\.-]+", text)
+#     phone = re.search(r"(?<!\d)(\+62|08|62)[\d\s\-]{8,}(?!\d)", text)
+#     name = next((line.strip() for line in text.splitlines()[:10] if line and line[0].isupper()), None)
+#     return name, email.group() if email else "", phone.group() if phone else ""
 
 def generate_prompt(cv_text, name, email, phone):
     today = datetime.now().strftime("%d %B %Y")
-    hr_line = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Manager"
+    hr_line = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Team"
     lang = "Indonesian (Bahasa Indonesia)" if language == "Bahasa Indonesia" else "English"
+    
+    # 👤 **Applicant Info:**
+    # - Name: {name}
+    # - Email: {email}
+    # - Phone: {phone}
 
     return f"""
 You are a professional cover letter writer. Your task is to create an engaging, professional, and customized cover letter using the following:
 
 📅 **Date:** {today}
 
-👤 **Applicant Info:**
-- Name: {name}
-- Email: {email}
-- Phone: {phone}
 
 📄 **Resume (analyze for achievements, skills, and experiences):**
 {cv_text}
@@ -140,17 +141,16 @@ def export_pdf(letter_text):
 if submitted and cv_file:
     with st.spinner("Extracting and analyzing CV..."):
         cv_text = extract_text(cv_file)
-        name, email, phone = extract_contact_info(cv_text)
+        # name, email, phone = extract_contact_info(cv_text)
 
-        # Manual fallback inputs if missing
-        if not name:
-            name = st.text_input("⚠️ Name not detected, please input manually:")
-        if not email:
-            email = st.text_input("⚠️ Email not detected, please input manually:")
-        if not phone:
-            phone = st.text_input("⚠️ Phone number not detected, please input manually:")
+        # # Manual fallback inputs if missing
+        # if not name:
+        #     name = st.text_input("⚠️ Name not detected, please input manually:")
+        # if not email:
+        #     email = st.text_input("⚠️ Email not detected, please input manually:")
+        # if not phone:
+        #     phone = st.text_input("⚠️ Phone number not detected, please input manually:")
 
-    if name and email and phone:
         with st.spinner("Generating cover letter using Gemini..."):
             prompt = generate_prompt(cv_text, name, email, phone)
             model = genai.GenerativeModel("gemini-2.0-flash")
