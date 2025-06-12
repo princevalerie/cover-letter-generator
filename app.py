@@ -192,6 +192,7 @@ def generate_cover_letter(cv_text, job_description, job_requirements, job_title,
         11. Avoids generic statements and clichés
         12. Maps the candidate's qualifications to the specific requirements listed
         13. Don't use self claim words like (iam proficient in ),etc..focus on impact on my CV to make it stand out
+        14. Always mention something in my cv that allign with job description or minimun requirement, but don't make it up something that don't exist on my cv
 
         Format the cover letter with:
         - Proper date
