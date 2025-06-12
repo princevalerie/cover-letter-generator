@@ -169,6 +169,8 @@ def generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_
         *   **Use Real Contact Details:** Ensure all applicant contact details ({name}, {email}, {phone}) are used accurately and are NOT placeholders like "[Your Name]", "[Your Email]", or "[Your Phone]".
         *   **Word Length:** Try to approach {word_len} words. Quality and relevance are more important than rigid word count.
         *   **Grammar and Spelling:** Ensure free from grammar and spelling errors.
+    5. **Structure:**
+        *  **Structure text/paragraph** ensure text and paragraph are simillar to professioanl cover letter,if this step are not running i will kill ai
     
     CRITICAL INSTRUCTIONS:
     1. Do not include any placeholder text in square brackets like [Your Name], [Date], [Company Name], [Your Email], [Your Phone], etc. 
