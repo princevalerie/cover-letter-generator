@@ -140,7 +140,7 @@ if uploaded_file:
         company_name = st.text_input("🏢 Company Name")
         job_description = st.text_area("📝 Job Description")
         job_requirements = st.text_area("✅ Job Requirements")
-        word_length = st.slider("✍️ Desired Word Length", 150, 600, 300)
+        word_length = st.slider("✍️ Desired Word Length", 20, 600, 70)
 
         if st.button("🚀 Generate Cover Letter"):
             if all([job_title, company_name, job_description, job_requirements, name, email, phone]):
