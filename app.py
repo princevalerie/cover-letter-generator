@@ -176,6 +176,7 @@ def generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_
     3. Do not include any metadata, instructions, or notes in square brackets in the final output.
     4. The output should be a clean, professional cover letter ready for immediate use.
     5. Remove any text that appears in square brackets [ ] completely from the final output.
+    6. Always structure the paragrapgh and text allignment like professional cover letter
     
     Output only the complete cover letter text without any additional commentary, metadata, or instructions.
     """
