@@ -146,7 +146,8 @@ def export_pdf(letter_text):
         alignment=TA_JUSTIFY,
         fontName='Times-Roman',
         fontSize=12,
-        leading=16,        # jarak baris (line height)
+        leading=16,    
+        firstLineIndent=20
     )
     elements = []
     for para in letter_text.split("\n\n"):
