@@ -178,6 +178,8 @@ def generate_cover_letter(cv_text, job_description, job_requirements, job_title,
         ADDITIONAL INSTRUCTIONS:
         {hr_info}
 
+        Always detect my Name,my Phone Number,my Email on CV 
+
         Please create a cover letter that:
         1. Uses proper business letter format with appropriate salutation and closing
         2. Has a strong opening paragraph that captures attention
@@ -195,7 +197,7 @@ def generate_cover_letter(cv_text, job_description, job_requirements, job_title,
         14. Always mention something in my cv that allign with job description or minimun requirement, but don't make it up something that don't exist on my cv
 
         Format the cover letter with:
-        - Detect my Name,my Phone Number,my Email on CV 
+        - Input my Name,my Phone Number,my Email on cover letter
         - Date right now
         - Professional salutation
         - Well-structured paragraphs (you decide the optimal number and structure)
