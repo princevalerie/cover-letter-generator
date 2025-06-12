@@ -175,7 +175,7 @@ if cv_file:
     word_len = st.slider("Word Count", 30, 500, 70, 10)
     hr_name = st.text_input("HR Name (optional)")
     hr_role = st.text_input("HR Role (optional)")
-    bahasa = st.text_inpuy("Bahasa Cover Letter")
+    bahasa = st.text_input("Bahasa Cover Letter")
 
     if st.button("✨ Generate Cover Letter"):
         if all([name, email, phone, job_title, company, job_desc, job_reqs]):
