@@ -121,6 +121,7 @@ You are a professional cover letter writer. Your task is to create an engaging, 
     4. The output should be a clean, professional cover letter ready for immediate use.
     5. Remove any text that appears in square brackets [ ] completely from the final output.
     6. Always structure the paragrapgh and text allignment like professional cover letter
+    7. Do not include any address and instruction to fill the address
 
 📌 Avoid copying the CV. Instead, synthesize and write a flowing, impactful letter.
 """
