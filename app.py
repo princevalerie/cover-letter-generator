@@ -5,6 +5,12 @@ import docx
 import os
 from dotenv import load_dotenv
 from datetime import datetime
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib.enums import TA_LEFT, TA_JUSTIFY
+import io
 
 # Load environment variables
 load_dotenv()
@@ -18,38 +24,33 @@ st.set_page_config(
 
 # Configure Gemini API
 api_key = os.getenv("GEMINI_API_KEY")
-api_configured = False
 
+# Check if API key exists, if not show error and stop
 if not api_key:
-    # Show sidebar for API key input if not found in environment
-    with st.sidebar:
-        st.header("🔑 API Configuration")
-        st.warning("API key not found in .env file")
-        api_key = st.text_input("Enter your Gemini API Key", type="password", key="api_key_input")
-        
-        if api_key:
-            try:
-                genai.configure(api_key=api_key)
-                st.success("✅ API Key configured!")
-                api_configured = True
-            except Exception as e:
-                st.error(f"❌ Invalid API key: {str(e)}")
-        else:
-            st.info("Please enter your API key to continue")
-        
-        st.markdown("---")
-        st.markdown("### 🔗 How to get Gemini API Key:")
-        st.markdown("1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)")
-        st.markdown("2. Create a new API key (free)")
-        st.markdown("3. Copy and paste it above")
-        st.markdown("4. Or add it to your .env file as GEMINI_API_KEY")
-else:
-    try:
-        genai.configure(api_key=api_key)
-        api_configured = True
-    except Exception as e:
-        st.error(f"❌ Error configuring Gemini API: {str(e)}")
-        st.stop()
+    st.error("❌ GEMINI_API_KEY not found in environment variables!")
+    st.markdown("""
+    ### 🔧 Setup Required:
+    
+    **1. Create a `.env` file in your project root:**
+    ```
+    GEMINI_API_KEY=your_api_key_here
+    ```
+    
+    **2. Get your Gemini API Key:**
+    - Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+    - Create a new API key (free)
+    - Copy and paste it to your `.env` file
+    
+    **3. Restart the application**
+    """)
+    st.stop()
+
+try:
+    genai.configure(api_key=api_key)
+    api_configured = True
+except Exception as e:
+    st.error(f"❌ Error configuring Gemini API: {str(e)}")
+    st.stop()
 
 # Title and description
 st.title("📝 Cover Letter Generator")
@@ -95,8 +96,62 @@ def extract_text_from_file(uploaded_file):
             return None
     return None
 
+# Function to create PDF from text
+def create_pdf(text, filename):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, 
+                          rightMargin=72, leftMargin=72,
+                          topMargin=72, bottomMargin=18)
+    
+    # Get styles
+    styles = getSampleStyleSheet()
+    
+    # Create custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        textColor='#333333',
+        spaceAfter=30,
+        alignment=TA_LEFT
+    )
+    
+    body_style = ParagraphStyle(
+        'CustomBody',
+        parent=styles['Normal'],
+        fontSize=11,
+        leading=14,
+        textColor='#333333',
+        alignment=TA_JUSTIFY,
+        spaceAfter=12
+    )
+    
+    # Build story
+    story = []
+    
+    # Split text into paragraphs
+    paragraphs = text.split('\n\n')
+    
+    for i, para in enumerate(paragraphs):
+        if para.strip():
+            # Clean the paragraph text for reportlab
+            clean_para = para.strip().replace('\n', ' ')
+            
+            # First paragraph gets title style if it looks like a header
+            if i == 0 and (clean_para.startswith('Dear') or len(clean_para) < 100):
+                story.append(Paragraph(clean_para, body_style))
+            else:
+                story.append(Paragraph(clean_para, body_style))
+            
+            story.append(Spacer(1, 12))
+    
+    # Build PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
 # Function to generate cover letter using Gemini 2.0 Flash
-def generate_cover_letter(cv_text, job_description, job_title, company_name, hr_name=None, hr_role=None):
+def generate_cover_letter(cv_text, job_description, job_requirements, job_title, company_name, word_length, hr_name=None, hr_role=None):
     try:
         # Use Gemini 2.0 Flash model
         model = genai.GenerativeModel('gemini-2.0-flash-exp')
@@ -118,6 +173,7 @@ def generate_cover_letter(cv_text, job_description, job_title, company_name, hr_
         - Job Title: {job_title}
         - Company Name: {company_name}
         - Job Description: {job_description}
+        - Job Requirements: {job_requirements}
 
         ADDITIONAL INSTRUCTIONS:
         {hr_info}
@@ -125,23 +181,25 @@ def generate_cover_letter(cv_text, job_description, job_title, company_name, hr_
         Please create a cover letter that:
         1. Uses proper business letter format with appropriate salutation and closing
         2. Has a strong opening paragraph that captures attention
-        3. Body paragraphs (2-3) that specifically highlight relevant experience and skills from the CV that match the job requirements
-        4. Shows genuine enthusiasm for the role and demonstrates knowledge about the company
-        5. Includes specific examples and achievements where possible
-        6. Has a compelling closing paragraph with a call to action
-        7. Is professional, engaging, and tailored to the specific role
-        8. Is approximately 250-400 words in length
-        9. Uses active voice and confident language
-        10. Avoids generic statements and clichés
+        3. Organizes content in well-structured paragraphs that specifically highlight relevant experience and skills from the CV that match the job requirements
+        4. Directly addresses the specific job requirements mentioned and shows how the candidate meets them
+        5. Shows genuine enthusiasm for the role and demonstrates knowledge about the company
+        6. Includes specific examples and achievements where possible
+        7. Has a compelling closing paragraph with a call to action
+        8. Is professional, engaging, and tailored to the specific role
+        9. Is approximately {word_length} words in length
+        10. Uses active voice and confident language
+        11. Avoids generic statements and clichés
+        12. Maps the candidate's qualifications to the specific requirements listed
 
         Format the cover letter with:
         - Proper date
         - Recipient address (if HR info provided)
         - Professional salutation
-        - Well-structured body paragraphs
+        - Well-structured paragraphs (you decide the optimal number and structure)
         - Professional closing and signature line
 
-        Make it sound authentic and compelling while maintaining professionalism.
+        Make it sound authentic and compelling while maintaining professionalism. Focus especially on how the candidate's background aligns with the specific requirements mentioned. Structure the paragraphs in the most effective way to present the candidate's qualifications.
         """
         
         response = model.generate_content(prompt)
@@ -151,44 +209,38 @@ def generate_cover_letter(cv_text, job_description, job_title, company_name, hr_
         st.error(f"Error generating cover letter: {str(e)}")
         return None
 
-# Sidebar with information (only show if API is configured)
-if api_configured:
-    with st.sidebar:
-        if os.getenv("GEMINI_API_KEY"):
-            st.success("🔑 API Key loaded from .env")
-        else:
-            st.success("🔑 API Key configured manually")
-            
-        st.markdown("---")
-        st.header("ℹ️ About")
-        st.markdown("**Powered by Gemini 2.0 Flash**")
-        st.markdown("This tool generates personalized cover letters by analyzing your CV and the job requirements.")
+# Sidebar with information
+with st.sidebar:
+    st.success("🔑 API Key loaded from .env")
         
-        st.markdown("---")
-        st.header("📋 How to Use")
-        st.markdown("""
-        1. **Upload your CV/Resume**
-        2. **Enter job details**
-        3. **Add HR info** (optional)
-        4. **Click Generate**
-        5. **Download or copy** your cover letter
-        """)
-        
-        st.markdown("---")
-        st.header("💝 Tips")
-        st.markdown("""
-        • Use a detailed CV with specific achievements
-        • Provide complete job description
-        • Include company-specific information
-        • Review and customize the output
-        """)
-
-# Main interface - only show if API is configured
-if not api_configured:
-    st.warning("👈 Please configure your Gemini API key in the sidebar to continue.")
-    st.info("**Option 1:** Add `GEMINI_API_KEY=your_key_here` to your `.env` file")
-    st.info("**Option 2:** Enter your API key in the sidebar")
-    st.stop()
+    st.markdown("---")
+    st.header("ℹ️ About")
+    st.markdown("**Powered by Gemini 2.0 Flash**")
+    st.markdown("This tool generates personalized cover letters by analyzing your CV and the job requirements.")
+    
+    st.markdown("---")
+    st.header("📋 How to Use")
+    st.markdown("""
+    1. **Upload your CV/Resume**
+    2. **Enter job title & company**
+    3. **Add job description & requirements**
+    4. **Set word count preference**
+    5. **Add HR info** (optional)
+    6. **Click Generate**
+    7. **Download as TXT or PDF**
+    """)
+    
+    st.markdown("---")
+    st.header("💝 Tips")
+    st.markdown("""
+    • Use a detailed CV with specific achievements
+    • Provide complete job description
+    • List specific requirements separately
+    • Adjust word count based on company preference
+    • Include technical skills and qualifications
+    • Add company-specific information
+    • Review and customize the output
+    """)
 
 # Create two columns
 col1, col2 = st.columns([1, 1])
@@ -227,9 +279,16 @@ with col1:
     )
     job_description = st.text_area(
         "Job Description *", 
-        placeholder="Paste the complete job description here including requirements, responsibilities, and qualifications...",
-        height=200,
+        placeholder="Paste the complete job description here including responsibilities and qualifications...",
+        height=150,
         help="Include the full job posting for best results"
+    )
+    
+    job_requirements = st.text_area(
+        "Job Requirements *", 
+        placeholder="List the specific requirements, skills, qualifications, and experience needed for this role...",
+        height=150,
+        help="Include technical skills, years of experience, education requirements, certifications, etc."
     )
     
     # Optional HR information
@@ -239,6 +298,17 @@ with col1:
         hr_name = st.text_input("HR Name", placeholder="e.g., Sarah Johnson")
     with col_hr2:
         hr_role = st.text_input("HR Role", placeholder="e.g., HR Manager")
+    
+    # Word length control
+    st.subheader("Cover Letter Settings")
+    word_length = st.slider(
+        "Target Word Count", 
+        min_value=20, 
+        max_value=600, 
+        value=350, 
+        step=10,
+        help="Choose the approximate length of your cover letter"
+    )
     
     # Generate button
     generate_btn = st.button("🚀 Generate Cover Letter", type="primary", use_container_width=True)
@@ -256,57 +326,84 @@ with col2:
             st.error("❌ Please enter the company name!")
         elif not job_description:
             st.error("❌ Please enter the job description!")
+        elif not job_requirements:
+            st.error("❌ Please enter the job requirements!")
         else:
             with st.spinner("🤖 AI is crafting your personalized cover letter..."):
                 cover_letter = generate_cover_letter(
-                    cv_text, job_description, job_title, company_name, hr_name, hr_role
+                    cv_text, job_description, job_requirements, job_title, company_name, word_length, hr_name, hr_role
                 )
                 
                 if cover_letter:
                     st.success("✅ Cover letter generated successfully!")
                     
-                    # Display the cover letter
-                    st.text_area(
-                        "Your Cover Letter:",
-                        cover_letter,
-                        height=600,
-                        key="cover_letter_output"
-                    )
-                    
-                    # Action buttons
-                    col_btn1, col_btn2 = st.columns(2)
-                    with col_btn1:
-                        # Download button
-                        st.download_button(
-                            label="📥 Download as TXT",
-                            data=cover_letter,
-                            file_name=f"cover_letter_{company_name.replace(' ', '_')}_{job_title.replace(' ', '_')}.txt",
-                            mime="text/plain",
-                            use_container_width=True
-                        )
-                    
-                    with col_btn2:
-                        # Copy to clipboard info
-                        if st.button("📋 Show for Copy", use_container_width=True):
-                            st.code(cover_letter, language=None)
-                            st.info("💡 Select the text above and copy it (Ctrl+C / Cmd+C)")
-                    
-                    # Additional options
-                    st.markdown("---")
-                    st.subheader("📊 Document Statistics")
-                    words = len(cover_letter.split())
-                    chars = len(cover_letter)
-                    col_stat1, col_stat2, col_stat3 = st.columns(3)
-                    with col_stat1:
-                        st.metric("Words", words)
-                    with col_stat2:
-                        st.metric("Characters", chars)
-                    with col_stat3:
-                        st.metric("Paragraphs", cover_letter.count('\n\n') + 1)
+                    # Store in session state for persistence
+                    st.session_state.cover_letter = cover_letter
+                    st.session_state.company_name = company_name
+                    st.session_state.job_title = job_title
 
-# Default view when no generation is done
-if not generate_btn and col2:
-    with col2:
+    # Display cover letter if it exists in session state
+    if 'cover_letter' in st.session_state:
+        cover_letter = st.session_state.cover_letter
+        company_name = st.session_state.company_name
+        job_title = st.session_state.job_title
+        
+        # Display the cover letter
+        st.text_area(
+            "Your Cover Letter:",
+            cover_letter,
+            height=600,
+            key="cover_letter_output"
+        )
+        
+        # Action buttons
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
+        
+        with col_btn1:
+            # Download TXT button
+            st.download_button(
+                label="📥 Download TXT",
+                data=cover_letter,
+                file_name=f"cover_letter_{company_name.replace(' ', '_')}_{job_title.replace(' ', '_')}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+        
+        with col_btn2:
+            # Download PDF button
+            try:
+                pdf_buffer = create_pdf(cover_letter, f"cover_letter_{company_name}_{job_title}")
+                st.download_button(
+                    label="📑 Download PDF",
+                    data=pdf_buffer,
+                    file_name=f"cover_letter_{company_name.replace(' ', '_')}_{job_title.replace(' ', '_')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+            except Exception as e:
+                st.error(f"PDF generation error: {str(e)}")
+                st.info("💡 Install reportlab: `pip install reportlab`")
+        
+        with col_btn3:
+            # Copy to clipboard info
+            if st.button("📋 Show for Copy", use_container_width=True):
+                st.code(cover_letter, language=None)
+                st.info("💡 Select the text above and copy it (Ctrl+C / Cmd+C)")
+        
+        # Additional options
+        st.markdown("---")
+        st.subheader("📊 Document Statistics")
+        words = len(cover_letter.split())
+        chars = len(cover_letter)
+        col_stat1, col_stat2, col_stat3 = st.columns(3)
+        with col_stat1:
+            st.metric("Words", words)
+        with col_stat2:
+            st.metric("Characters", chars)
+        with col_stat3:
+            st.metric("Paragraphs", cover_letter.count('\n\n') + 1)
+    else:
+        # Default view when no generation is done
         st.info("👈 Fill in the information on the left and click 'Generate Cover Letter' to create your personalized cover letter.")
         
         # Show example preview
@@ -318,6 +415,7 @@ if not generate_btn and col2:
         ✅ **Personalized content** based on your CV and job requirements  
         ✅ **Compelling opening** that captures attention  
         ✅ **Relevant experience** highlighting your best qualifications  
+        ✅ **Requirements mapping** showing how you meet specific job requirements  
         ✅ **Company-specific** details showing genuine interest  
         ✅ **Strong closing** with clear call to action  
         """)
@@ -330,11 +428,14 @@ with st.expander("📦 Installation & Setup Guide"):
     st.markdown("""
     **1. Install Required Dependencies:**
     ```bash
-    pip install streamlit google-generativeai PyPDF2 python-docx python-dotenv
+    pip install streamlit google-generativeai PyPDF2 python-docx python-dotenv reportlab
     ```
     
     **2. Create .env file:**
-    Create a `.env` file in your project root with your Gemini API key.
+    Create a `.env` file in your project root:
+    ```
+    GEMINI_API_KEY=your_api_key_here
+    ```
     
     **3. Run the Application:**
     ```bash
@@ -348,7 +449,7 @@ with st.expander("🔑 API Key Setup"):
     1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
     2. Click "Create API Key"
     3. Copy the generated key
-    4. Add it to your `.env` file
+    4. Add it to your `.env` file as `GEMINI_API_KEY=your_key_here`
     
     **Note:** Gemini 2.0 Flash offers improved performance and better understanding compared to previous versions.
     """)
