@@ -12,7 +12,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_JUSTIFY
 
-# ——————————
 # Load environment variables
 load_dotenv()
 
@@ -34,7 +33,6 @@ except Exception as e:
 st.title("📝 Cover Letter Generator")
 st.markdown("Generate professional cover letters using **Gemini 2.0 Flash**")
 
-# ——————————
 # File upload and inputs
 cv_file = st.file_uploader("📎 Upload your CV (PDF, DOCX, TXT)", type=["pdf", "docx", "txt"])
 
@@ -49,8 +47,7 @@ with st.form("form"):
     language  = st.radio("Language", ["English", "Bahasa Indonesia"])
     submitted = st.form_submit_button("Generate Cover Letter")
 
-# ——————————
-# Helper: extract text from different file types
+# Helper: extract text
 def extract_text_from_pdf(f):
     reader = PdfReader(f)
     return "\n".join(page.extract_text() or "" for page in reader.pages)
@@ -69,71 +66,59 @@ def extract_text(f):
         t = f.read().decode("utf-8")
     return t
 
-# ——————————
-# Helper: detect & strip header contact info
+# Strip header info
 def strip_header(text):
     lines = text.splitlines()
     cleaned = []
     header_ended = False
     for line in lines:
-        # jika menemukan baris kosong setelah header → anggap header selesai
         if not header_ended:
-            # pola email, telepon, tanggal, alamat umum
             if re.search(r"[\w\.-]+@[\w\.-]+", line) \
                or re.search(r"(?<!\d)(\+62|08|62)[\d\s\-]{6,}(?!\d)", line) \
                or re.search(r"\b\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\b", line, re.IGNORECASE) \
                or len(line.strip()) == 0:
                 continue
             else:
-                # baris pertama non-header → mulai simpan semuanya
                 header_ended = True
-
         cleaned.append(line)
     return "\n".join(cleaned).strip()
 
-# ——————————
-# Generate prompt untuk Gemini
+# Generate prompt
 def generate_prompt(cv_text):
     today   = datetime.now().strftime("%d %B %Y")
     hr_line = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Team"
     lang    = "Indonesian (Bahasa Indonesia)" if language == "Bahasa Indonesia" else "English"
 
     return f"""
-You are a professional cover letter writer. Your task is to create an engaging, professional, and customized cover letter using the following:
+You are a professional cover letter writer. Create a clean, ready-to-use cover letter:
 
-📅 **Date:** {today}
+Date: {today}
 
-📄 **Resume (analyze for achievements, skills, and experiences):**
+Resume (achievements, skills, experiences):
 {cv_text}
 
-💼 **Job Info:**
+Job Info:
 - Position: {job_title}
 - Company: {company}
 - Description: {job_desc}
 - Requirements: {job_reqs}
 
-🎯 **Instructions:**
-- Language: Write the letter in **{lang}**.
-- Length: Target approx. **{word_len} words** (+/- 15%).
-- Address to: **{hr_line}**
+Instructions:
+- Language: {lang}
+- Length: approx. {word_len} words
+- Address to: {hr_line}
 
-📝 **Structure & Tone:**
-1. Salutation: Use specific name if given (e.g., "Dear Mr./Ms. X"), otherwise "Dear Hiring Manager".
-2. Intro: Show enthusiasm and suitability.
-3. Body:
-   - Match 2–3 requirements with achievements from CV.
-   - Quantify with real numbers.
-   - Highlight value for {company}.
-4. Motivation: (optional) Why you want to join.
-5. Closing: Reaffirm interest and invite follow-up.
-6. Signature: Full name
+Structure:
+1. Salutation (name or "Dear Hiring Manager").
+2. Intro: Enthusiasm + fit.
+3. Body: Match 2–3 requirements with examples and metrics.
+4. Motivation: (optional).
+5. Closing and signature.
 
-📌 Do NOT include any personal contact details or address in the final letter.
-📌 Output must be a clean, ready-to-use cover letter.
+Do not include any personal contact details or headers in final output.
 """
 
-# ——————————
-# Export to PDF tanpa merusak paragraf
+# Export PDF with first-line indent
 def export_pdf(letter_text):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4,
@@ -147,7 +132,7 @@ def export_pdf(letter_text):
         fontName='Times-Roman',
         fontSize=12,
         leading=16,
-        firstLineIndent=20
+        firstLineIndent=20  # indent first line
     )
     elements = []
     for para in letter_text.split("\n\n"):
@@ -156,33 +141,31 @@ def export_pdf(letter_text):
     buffer.seek(0)
     return buffer
 
-# ——————————
-# Main
+# Main logic
 if submitted and cv_file:
-    # validasi form
-    if not job_title or not company or not job_desc or not job_reqs:
-        st.warning("⚠️ Mohon isi semua kolom job terlebih dahulu.")
+    if not (job_title and company and job_desc and job_reqs):
+        st.warning("⚠️ Please fill all job fields.")
         st.stop()
 
-    with st.spinner("Extracting CV…"):
-        raw = extract_text(cv_file)
-        clean = strip_header(raw)
+    with st.spinner("Reading CV…"):
+        raw_text = extract_text(cv_file)
+        clean_text = strip_header(raw_text)
 
-    with st.spinner("Generating cover letter…"):
-        prompt = generate_prompt(clean)
-        model  = genai.GenerativeModel("gemini-2.0-flash")
-        resp   = model.generate_content(prompt)
+    with st.spinner("Generating letter…"):
+        prompt = generate_prompt(clean_text)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        resp = model.generate_content(prompt)
         letter = resp.text.strip()
 
     st.subheader("📄 Generated Cover Letter")
     st.text_area("Preview", letter, height=350)
 
     pdf = export_pdf(letter)
-    st.download_button("📥 Download as PDF", data=pdf,
-                       file_name="Cover_Letter.pdf",
-                       mime="application/pdf")
+    st.download_button("📥 Download PDF", data=pdf,
+                       file_name="Cover_Letter.pdf", mime="application/pdf")
 else:
-    st.info("👆 Upload CV dan isi form untuk menghasilkan cover letter.")
+    st.info("👆 Upload CV and fill the form to generate a cover letter.")
+
 
 
 
