@@ -123,7 +123,7 @@ if submitted and cv_file:
         cv_text = extract_text(cv_file)
 
         with st.spinner("Generating cover letter using Gemini..."):
-            prompt = generate_prompt(cv_text, "", "", "")
+            prompt = generate_prompt(cv_text)
             model = genai.GenerativeModel("gemini-2.0-flash")
             response = model.generate_content(prompt)
             letter = response.text.strip()
