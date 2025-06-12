@@ -195,7 +195,7 @@ def generate_cover_letter(cv_text, job_description, job_requirements, job_title,
         14. Always mention something in my cv that allign with job description or minimun requirement, but don't make it up something that don't exist on my cv
 
         Format the cover letter with:
-        - Detect [my Name][my Phone Number][my Email] on CV and delete [ ] in cover letter
+        - Detect my Name,my Phone Number,my Email on CV 
         - Date right now
         - Professional salutation
         - Well-structured paragraphs (you decide the optimal number and structure)
