@@ -146,7 +146,7 @@ def export_pdf(letter_text):
         alignment=TA_JUSTIFY,
         fontName='Times-Roman',
         fontSize=12,
-        leading=16,    
+        leading=16,
         firstLineIndent=20
     )
     elements = []
