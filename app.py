@@ -43,7 +43,7 @@ with st.form("form"):
     company = st.text_input("Company Name")
     job_desc = st.text_area("Job Description")
     job_reqs = st.text_area("Job Requirements")
-    word_len = st.slider("Word Count Target", 250, 800, 400)
+    word_len = st.slider("Word Count Target", 40, 800, 100)
     hr_name = st.text_input("HR Name (Optional)")
     hr_role = st.text_input("HR Role (Optional)")
     language = st.radio("Language", ["English", "Bahasa Indonesia"])
@@ -113,6 +113,14 @@ You are a professional cover letter writer. Your task is to create an engaging, 
 5. **Motivation:** Optional — why you want to work at {company}.
 6. **Closing:** Reaffirm interest and politely invite follow-up.
 7. **Signature:** Full name
+
+    CRITICAL INSTRUCTIONS:
+    1. Do not include any placeholder text in square brackets like [Your Name], [Date], [Company Name], [Your Email], [Your Phone], etc. 
+    2. Use the actual provided information: {name}, {email}, {phone}, {today_date}, {company}, etc.
+    3. Do not include any metadata, instructions, or notes in square brackets in the final output.
+    4. The output should be a clean, professional cover letter ready for immediate use.
+    5. Remove any text that appears in square brackets [ ] completely from the final output.
+    6. Always structure the paragrapgh and text allignment like professional cover letter
 
 📌 Avoid copying the CV. Instead, synthesize and write a flowing, impactful letter.
 """
