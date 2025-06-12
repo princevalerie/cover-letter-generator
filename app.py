@@ -135,6 +135,7 @@ def generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_
     
     **Output yang Diharapkan:**
     Teks lengkap surat lamaran, siap untuk disalin dan ditempel. Pastikan tidak ada instruksi atau metadata dari prompt ini yang disertakan dalam output akhir.
+    hilangkan metadata yang diawalitana [ lalu diakhiri ]
     """
     model = genai.GenerativeModel("gemini-2.0-flash")
     response = model.generate_content(prompt)
