@@ -109,11 +109,16 @@ Instructions:
 - Address to: {hr_line}
 
 Structure:
-1. Salutation (name or "Dear Hiring Manager").
-2. Intro: Enthusiasm + fit.
-3. Body: Match 2–3 requirements with examples and metrics.
-4. Motivation: (optional).
-5. Closing and signature.
+📝 **Structure & Tone:**
+1. **Salutation:** Use specific name if given (e.g., \"Dear Mr./Ms. X\"), or \"Dear Hiring Manager\".
+2. **Intro:** Show enthusiasm and suitability for the role.
+3. **Body:**
+    - Match top 2–3 job requirements with real achievements/skills from CV.
+    - Use real examples and quantify (e.g., \"increased efficiency by 20%\").
+    - Highlight what value you bring to {company}.
+4. **Motivation:** Optional — why you want to work at {company}.
+5. **Closing:** Reaffirm interest and politely invite follow-up.
+6. **Signature:** Full name
 
 Do not include any personal contact details or headers in final output.
 """
