@@ -1,25 +1,25 @@
 # Core Streamlit Application
-streamlit>=1.28.0
+streamlit
 
 # Google Gemini AI
-google-generativeai>=0.3.0
+google-generativeai
 
 # PDF Processing
-PyPDF2>=3.0.1
+PyPDF2
 
 # Word Document Processing
-python-docx>=0.8.11
+python-docx
 
 # Environment Variables
-python-dotenv>=1.0.0
+python-dotenv
 
 # PDF Generation
-reportlab>=4.0.4
+reportlab
 
 # Additional Dependencies (automatically installed with above)
 # These are included for reference and version pinning
-requests>=2.31.0
-urllib3>=2.0.0
-pillow>=10.0.0
+requests
+urllib3
+pillow
 
 # datetime
