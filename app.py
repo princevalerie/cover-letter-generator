@@ -73,29 +73,68 @@ def generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_
     today_date = datetime.now().strftime("%d %B %Y")
     hr_info = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Manager"
     prompt = f"""
-    Write a professional cover letter for the following job. Use today's date: {today_date}.
-    Applicant info:
-    - Name: {name}
+    Anda adalah seorang penulis surat lamaran profesional yang ahli. Tugas Anda adalah membuat surat lamaran yang menarik, profesional, dan sangat disesuaikan berdasarkan informasi yang diberikan.
+    
+    **Gunakan tanggal hari ini:** {today_date}
+    
+    **Informasi Pelamar:**
+    - Nama Lengkap: {name}
     - Email: {email}
-    - Phone: {phone}
-
-    CV Content:
+    - Nomor Telepon: {phone}
+    
+    **Konten CV (Resume) Pelamar:**
     {cv_text}
-
-    Job Info:
-    - Title: {job_title}
-    - Company: {company}
-    - Description: {job_desc}
-    - Requirements: {job_reqs}
-
-    Guidelines:
-    - Use real extracted contact details above. Never include placeholders like [Your Name]
-    - Use proper letter format, enthusiastic tone, clear structure
-    - Avoid generic phrases or self-praising claims
-    - Tailor content to job requirements and match with CV
-    - About {word_len} words
-    - End with a polite call to action
-    - Address letter {hr_info}.
+    *(Catatan untuk AI: Analisis teks CV ini secara menyeluruh untuk mengidentifikasi pengalaman, keterampilan, pencapaian, dan kualifikasi yang relevan dengan pekerjaan yang dilamar. Jangan hanya menyalin; ekstrak dan sintesis informasi yang paling relevan.)*
+    
+    **Informasi Pekerjaan:**
+    - Judul Posisi: {job_title}
+    - Nama Perusahaan: {company}
+    - Deskripsi Pekerjaan: {job_desc}
+    - Persyaratan Pekerjaan: {job_reqs}
+    
+    **Informasi Tambahan (Opsional):**
+    - Kepada (Penerima Surat/HR): {hr_info} *(Jika kosong, sapa dengan "Dear Hiring Manager," atau "Yth. Tim Rekrutmen,")*
+    - Perkiraan Panjang Kata: {word_len} *(Targetkan sekitar angka ini, fleksibilitas +/- 15% diperbolehkan)*
+    
+    **Panduan Utama Pembuatan Surat Lamaran:**
+    
+    1.  **Format Surat Profesional:**
+        *   **Bagian Kepala:**
+            *   Informasi kontak pelamar ({name}, {email}, {phone}) harus jelas di bagian atas.
+            *   Tanggal hari ini ({today_date}).
+            *   Informasi penerima (jika {hr_info} disediakan dan berisi nama spesifik/jabatan, gunakan itu. Jika tidak, cukup nama perusahaan {company} dan alamat jika ada).
+        *   **Salam Pembuka:**
+            *   Sapa penerima secara spesifik jika {hr_info} menyediakan nama (misalnya, "Yth. Bapak [Nama Belakang]," atau "Dear Ms. [Last Name],").
+            *   Jika {hr_info} kosong, umum (misalnya "Yth. Tim Rekrutmen di {company}," atau "Dear Hiring Manager,"). Hindari "To Whom It May Concern" jika memungkinkan.
+        *   **Isi Surat (Konten Inti dan Alur):**
+            *   **Awali surat** dengan menyebutkan posisi ({job_title}) yang dilamar dan di mana Anda melihat lowongan tersebut (jika informasi ini ada atau dapat diasumsikan secara umum, misal "website perusahaan"). Nyatakan antusiasme Anda dan secara singkat mengapa Anda yakin merupakan kandidat yang kuat untuk peran tersebut.
+            *   **Bagian inti surat harus berfokus pada penyesuaian kualifikasi Anda dengan kebutuhan pekerjaan.** Ini adalah bagian krusial.
+                *   Identifikasi 2-3 persyaratan atau tanggung jawab utama dari {job_reqs} dan {job_desc}.
+                *   Untuk setiap poin yang diangkat, **tunjukkan, jangan hanya mengatakan.** Jelaskan bagaimana pengalaman, keterampilan, atau pencapaian spesifik dari {cv_text} pelamar secara langsung relevan dan memenuhi persyaratan tersebut. Gunakan contoh konkret dari CV.
+                *   **Kuantifikasi pencapaian** jika memungkinkan (misalnya, "berhasil meningkatkan efisiensi proses sebesar 15% dalam 6 bulan").
+                *   Tekankan bagaimana kontribusi pelamar dapat **memberikan nilai tambah** bagi {company}.
+            *   **(Opsional namun sangat dianjurkan jika informasinya ada atau dapat disimpulkan)** Secara singkat, jelaskan **motivasi khusus** pelamar untuk bergabung dengan {company} (misalnya, ketertarikan pada misi perusahaan, nilai-nilai yang dianut, produk inovatif, atau reputasi industri). Anda juga bisa menyinggung bagaimana pelamar melihat dirinya **cocok dengan budaya perusahaan**, jika ada indikasi.
+            *   **Akhiri surat** dengan mengulangi antusiasme Anda untuk posisi tersebut. Sebutkan ketersediaan Anda untuk diskusi lebih lanjut dan sertakan **ajakan bertindak yang sopan dan jelas** (misalnya, "Saya sangat antusias untuk membahas lebih lanjut bagaimana kualifikasi saya dapat mendukung kesuksesan tim Anda di {company}. Terima kasih atas waktu dan pertimbangan Anda.").
+        *   **Salam Penutup:** Gunakan penutup profesional seperti "Hormat saya," atau "Sincerely,".
+        *   **Tanda Tangan:** Nama lengkap pelamar ({name}).
+    
+    2.  **Nada dan Gaya:**
+        *   **Profesional dan Antusias:** Nada harus menunjukkan kepercayaan diri, profesionalisme, dan antusiasme yang tulus terhadap peran dan perusahaan.
+        *   **Bahasa yang Jelas dan Ringkas:** Gunakan bahasa yang mudah dipahami, hindari jargon yang tidak perlu kecuali umum dalam industri tersebut. Kalimat harus efektif dan to the point.
+        *   **Proaktif dan Berorientasi pada Solusi:** Bingkai pengalaman sebagai cara Anda memecahkan masalah atau mencapai tujuan.
+    
+    3.  **Konten yang Disesuaikan (Sangat Penting!):**
+        *   **Hindari Pernyataan Generik:** Jangan gunakan frasa klise atau pernyataan umum yang bisa berlaku untuk pekerjaan apa pun (misalnya, "Saya pekerja keras," "Saya pembelajar cepat" tanpa bukti pendukung dari CV).
+        *   **Hindari Klaim Berlebihan/Tidak Berdasar:** Semua klaim tentang keterampilan dan pengalaman harus didukung oleh atau dapat disimpulkan dari {cv_text}.
+        *   **Fokus pada Kebutuhan Perusahaan:** Surat lamaran harus menunjukkan pemahaman tentang apa yang dicari {company} (berdasarkan {job_desc} dan {job_reqs}) dan bagaimana pelamar dapat memenuhi kebutuhan tersebut.
+    
+    4.  **Detail Teknis:**
+        *   **Gunakan Detail Kontak Nyata:** Pastikan semua detail kontak pelamar ({name}, {email}, {phone}) digunakan secara akurat dan BUKAN placeholder seperti "[Nama Anda]".
+        *   **Panjang Kata:** Usahakan mendekati {word_len} kata. Kualitas dan relevansi lebih penting daripada jumlah kata yang kaku.
+        *   **Tata Bahasa dan Ejaan:** Pastikan bebas dari kesalahan tata bahasa dan ejaan.
+    
+    **Output yang Diharapkan:**
+    Teks lengkap surat lamaran, siap untuk disalin dan ditempel. Pastikan tidak ada instruksi atau metadata dari prompt ini yang disertakan dalam output akhir.
     """
     model = genai.GenerativeModel("gemini-2.0-flash")
     response = model.generate_content(prompt)
