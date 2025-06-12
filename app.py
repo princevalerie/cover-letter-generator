@@ -76,15 +76,52 @@ def extract_contact_info(text):
 
 def generate_cover_letter(cv_text, name, email, phone):
     model = genai.GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content(f"""
-        Write a structured and professional cover letter in {bahasa}.
-        Today's date: {datetime.now().strftime('%d %B %Y')}
-        Job Title: {job_title}, Company: {company}
-        Job Description: {job_desc}
-        Requirements: {job_reqs}
-        Applicant: {name}, Email: {email}, Phone: {phone}
-        CV Content: {cv_text}
-        Use a clear professional layout and limit to ~{word_len} words.
+    from datetime import datetime
+
+    today = datetime.now().strftime("%d %B %Y")
+    hr_line = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Manager"
+    lang = "Indonesian (Bahasa Indonesia)" if language == "Bahasa Indonesia" else "English"
+
+    return f"""
+        You are a professional cover letter writer. Your task is to create an engaging, professional, and customized cover letter using the following:
+        
+        📅 **Date:** {today}
+        
+        👤 **Applicant Info:**
+        - Name: {name}
+        - Email: {email}
+        - Phone: {phone}
+        
+        📄 **Resume (analyze for achievements, skills, and experiences):**
+        {cv_text}
+        
+        💼 **Job Info:**
+        - Position: {job_title}
+        - Company: {company}
+        - Description: {job_desc}
+        - Requirements: {job_reqs}
+        
+        🎯 **Instructions:**
+        - Language: Write the letter in **{lang}**.
+        - Length: Target approx. **{word_len} words** (+/- 15%).
+        - Address to: **{hr_line}**
+        
+        📝 **Structure & Tone:**
+        1. **Header:** Applicant's contact, date, and recipient/company details.
+        2. **Salutation:** Use specific name if given (e.g., "Dear Mr./Ms. X"), or "Dear Hiring Manager".
+        3. **Intro:** Show enthusiasm and suitability for the role.
+        4. **Body:**
+            - Match top 2–3 job requirements with real achievements/skills from CV.
+            - Use real examples and quantify (e.g., "increased efficiency by 20%").
+            - Highlight what value you bring to {company}.
+        5. **Motivation:** Optional — why you want to work at {company}.
+        6. **Closing:** Reaffirm interest and politely invite follow-up.
+        7. **Signature:** Full name
+        
+        📌 Avoid copying the CV. Instead, synthesize and write a flowing, impactful letter.
+        
+        Start generating below:
+        """
     """)
     return response.text.strip()
 
