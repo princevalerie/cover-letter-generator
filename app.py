@@ -154,7 +154,7 @@ def create_pdf(text, filename):
 def generate_cover_letter(cv_text, job_description, job_requirements, job_title, company_name, word_length, hr_name=None, hr_role=None):
     try:
         # Use Gemini 2.0 Flash model
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         
         # Construct the prompt
         hr_info = ""
@@ -420,44 +420,3 @@ with col2:
         ✅ **Strong closing** with clear call to action  
         """)
 
-# Footer
-st.markdown("---")
-st.markdown("### 🔧 Setup Instructions")
-
-with st.expander("📦 Installation & Setup Guide"):
-    st.markdown("""
-    **1. Install Required Dependencies:**
-    ```bash
-    pip install streamlit google-generativeai PyPDF2 python-docx python-dotenv reportlab
-    ```
-    
-    **2. Create .env file:**
-    Create a `.env` file in your project root:
-    ```
-    GEMINI_API_KEY=your_api_key_here
-    ```
-    
-    **3. Run the Application:**
-    ```bash
-    streamlit run app.py
-    ```
-    """)
-
-with st.expander("🔑 API Key Setup"):
-    st.markdown("""
-    **Get your free Gemini API key:**
-    1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
-    2. Click "Create API Key"
-    3. Copy the generated key
-    4. Add it to your `.env` file as `GEMINI_API_KEY=your_key_here`
-    
-    **Note:** Gemini 2.0 Flash offers improved performance and better understanding compared to previous versions.
-    """)
-
-st.markdown("---")
-st.markdown("""
-<div style='text-align: center; color: #666;'>
-    <p>Made with ❤️ using Streamlit and Gemini 2.0 Flash | 
-    <a href='https://github.com' target='_blank'>View Source Code</a></p>
-</div>
-""", unsafe_allow_html=True)
