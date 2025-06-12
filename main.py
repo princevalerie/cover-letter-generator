@@ -16,6 +16,30 @@ st.set_page_config(
     layout="wide"
 )
 
+# Function to validate API key
+def validate_api_key(api_key):
+    """Validate if the API key is working by making a simple test call"""
+    try:
+        if not api_key or not api_key.startswith('AIza'):
+            return False, "API key should start with 'AIza'"
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        # Make a simple test call
+        response = model.generate_content("Hello")
+        return True, "API key is valid"
+    except Exception as e:
+        error_msg = str(e)
+        if "API_KEY_INVALID" in error_msg:
+            return False, "Invalid API key. Please check your key."
+        elif "PERMISSION_DENIED" in error_msg:
+            return False, "API key doesn't have permission for Gemini API."
+        elif "QUOTA_EXCEEDED" in error_msg:
+            return False, "API quota exceeded. Please check your usage."
+        else:
+            return False, f"Error: {error_msg}"
+
 # Configure Gemini API
 api_key = os.getenv("GEMINI_API_KEY")
 api_configured = False
@@ -28,12 +52,13 @@ if not api_key:
         api_key = st.text_input("Enter your Gemini API Key", type="password", key="api_key_input")
         
         if api_key:
-            try:
-                genai.configure(api_key=api_key)
-                st.success("✅ API Key configured!")
-                api_configured = True
-            except Exception as e:
-                st.error(f"❌ Invalid API key: {str(e)}")
+            with st.spinner("Validating API key..."):
+                is_valid, message = validate_api_key(api_key)
+                if is_valid:
+                    st.success(f"✅ {message}")
+                    api_configured = True
+                else:
+                    st.error(f"❌ {message}")
         else:
             st.info("Please enter your API key to continue")
         
@@ -43,13 +68,46 @@ if not api_key:
         st.markdown("2. Create a new API key (free)")
         st.markdown("3. Copy and paste it above")
         st.markdown("4. Or add it to your .env file as GEMINI_API_KEY")
+        
+        st.markdown("---")
+        st.markdown("### 🔧 Troubleshooting:")
+        st.markdown("""
+        **Common Issues:**
+        - API key should start with 'AIza'
+        - Make sure you copied the complete key
+        - Check if Gemini API is enabled in your Google Cloud project
+        - Verify your API quota hasn't been exceeded
+        """)
 else:
-    try:
-        genai.configure(api_key=api_key)
-        api_configured = True
-    except Exception as e:
-        st.error(f"❌ Error configuring Gemini API: {str(e)}")
-        st.stop()
+    with st.spinner("Validating API key from .env..."):
+        is_valid, message = validate_api_key(api_key)
+        if is_valid:
+            api_configured = True
+        else:
+            st.error(f"❌ {message}")
+            st.error("Please check your .env file or enter a valid API key in the sidebar")
+            
+            # Show sidebar for manual input as fallback
+            with st.sidebar:
+                st.header("🔑 API Configuration")
+                st.error("Invalid API key in .env file")
+                api_key_manual = st.text_input("Enter a valid Gemini API Key", type="password", key="api_key_manual")
+                
+                if api_key_manual:
+                    with st.spinner("Validating manual API key..."):
+                        is_valid_manual, message_manual = validate_api_key(api_key_manual)
+                        if is_valid_manual:
+                            st.success(f"✅ {message_manual}")
+                            api_configured = True
+                            api_key = api_key_manual  # Use manual key
+                        else:
+                            st.error(f"❌ {message_manual}")
+                
+                st.markdown("---")
+                st.markdown("### 🔗 Get a new API Key:")
+                st.markdown("1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)")
+                st.markdown("2. Create a new API key")
+                st.markdown("3. Make sure to enable Gemini API access")
 
 # Title and description
 st.title("📝 Cover Letter Generator")
@@ -160,7 +218,33 @@ def generate_cover_letter(cv_text, job_description, job_title, company_name, hr_
         return response.text
     
     except Exception as e:
-        st.error(f"Error generating cover letter: {str(e)}")
+        error_msg = str(e)
+        if "API_KEY_INVALID" in error_msg:
+            st.error("❌ **API Key Error**: Your API key is invalid or expired.")
+            st.error("**Solutions:**")
+            st.error("1. Check if your API key is correct (should start with 'AIza')")
+            st.error("2. Generate a new API key from Google AI Studio")
+            st.error("3. Make sure Gemini API is enabled in your project")
+        elif "PERMISSION_DENIED" in error_msg:
+            st.error("❌ **Permission Error**: API key doesn't have access to Gemini API.")
+            st.error("Make sure to enable Gemini API access in Google AI Studio")
+        elif "QUOTA_EXCEEDED" in error_msg:
+            st.error("❌ **Quota Error**: API usage limit exceeded.")
+            st.error("Please check your API usage or upgrade your plan")
+        elif "gemini-2.0-flash-exp" in error_msg.lower():
+            st.warning("⚠️ **Model Error**: Gemini 2.0 Flash Experimental might not be available.")
+            st.info("Trying with Gemini Pro instead...")
+            try:
+                # Fallback to gemini-pro
+                model_fallback = genai.GenerativeModel('gemini-pro')
+                response = model_fallback.generate_content(prompt)
+                st.success("✅ Generated using Gemini Pro (fallback)")
+                return response.text
+            except Exception as fallback_error:
+                st.error(f"❌ Fallback also failed: {str(fallback_error)}")
+                return None
+        else:
+            st.error(f"❌ **Unexpected Error**: {error_msg}")
         return None
 
 # Sidebar with information (only show if API is configured)
@@ -365,21 +449,41 @@ with st.expander("📦 Installation & Setup Guide"):
     ```
     """)
 
-with st.expander("🔑 API Key Setup"):
+with st.expander("🔑 API Key Setup & Troubleshooting"):
     st.markdown("""
     **Get your free Gemini API key:**
     1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
-    2. Click "Create API Key"
-    3. Copy the generated key
-    4. Add it to your `.env` file
+    2. Sign in with your Google account
+    3. Click "Create API Key" → "Create API key in new project"
+    4. Copy the generated key (starts with 'AIza')
+    5. Add it to your `.env` file or enter manually in sidebar
     
-    **Note:** Gemini 2.0 Flash offers improved performance and better understanding compared to previous versions.
+    **Common Issues & Solutions:**
+    
+    ❌ **"API key not valid"**
+    - Make sure you copied the complete API key
+    - API key should start with 'AIza'
+    - Generate a new key if the old one expired
+    
+    ❌ **"Permission denied"**  
+    - Enable Gemini API access in Google AI Studio
+    - Make sure you're using the correct Google account
+    
+    ❌ **"Quota exceeded"**
+    - Check your API usage limits
+    - Wait for quota reset or upgrade plan
+    
+    ❌ **"Model not available"**
+    - App will automatically fallback to Gemini Pro
+    - Some experimental models may have limited availability
+    
+    **Note:** Gemini API offers generous free tier limits for testing and development.
     """)
 
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666;'>
-    <p>Made with ❤️ using Streamlit and Gemini 2.0 Flash | 
+    <p>Made with ❤️ using Streamlit and Gemini AI | 
     <a href='https://github.com' target='_blank'>View Source Code</a></p>
 </div>
 """, unsafe_allow_html=True)
