@@ -1,3 +1,4 @@
+# Updated Streamlit app with contact info extraction and fallback input fields
 import streamlit as st
 import google.generativeai as genai
 from PyPDF2 import PdfReader
@@ -5,28 +6,21 @@ import docx
 import os
 from dotenv import load_dotenv
 from datetime import datetime
-from reportlab.lib.pagesizes import A4
+import re
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_LEFT, TA_JUSTIFY
 import io
-import re
 
 # Load environment variables
 load_dotenv()
 
 # Configure page
-st.set_page_config(
-    page_title="Cover Letter Generator",
-    page_icon="📝",
-    layout="wide"
-)
+st.set_page_config(page_title="Cover Letter Generator", page_icon="📝", layout="wide")
 
-# Configure Gemini API
+# Gemini API setup
 api_key = os.getenv("GEMINI_API_KEY")
-
-# Check if API key exists
 if not api_key:
     st.error("❌ GEMINI_API_KEY not found in environment variables!")
     st.stop()
@@ -37,130 +31,120 @@ except Exception as e:
     st.error(f"❌ Error configuring Gemini API: {str(e)}")
     st.stop()
 
+# Title and description
 st.title("📝 Cover Letter Generator")
-st.markdown("Generate professional cover letters using AI powered by **Gemini 2.0 Flash**")
+st.markdown("Generate professional cover letters using **Gemini 2.0 Flash**")
 
-# Extract functions
 def extract_text_from_pdf(pdf_file):
     try:
-        pdf_reader = PdfReader(pdf_file)
-        return "".join([page.extract_text() for page in pdf_reader.pages])
+        reader = PdfReader(pdf_file)
+        return "\n".join(page.extract_text() for page in reader.pages if page.extract_text())
     except Exception as e:
-        st.error(f"Error reading PDF: {str(e)}")
-        return None
+        st.error(f"Error reading PDF: {e}")
+        return ""
 
 def extract_text_from_docx(docx_file):
     try:
         doc = docx.Document(docx_file)
-        return "\n".join([p.text for p in doc.paragraphs])
+        return "\n".join(p.text for p in doc.paragraphs)
     except Exception as e:
-        st.error(f"Error reading DOCX: {str(e)}")
-        return None
+        st.error(f"Error reading DOCX: {e}")
+        return ""
 
 def extract_text_from_file(uploaded_file):
-    if uploaded_file:
-        if uploaded_file.type == "application/pdf":
-            return extract_text_from_pdf(uploaded_file)
-        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-            return extract_text_from_docx(uploaded_file)
-        elif uploaded_file.type == "text/plain":
-            return str(uploaded_file.read(), "utf-8")
-        else:
-            st.error("Unsupported file type. Please upload PDF, DOCX, or TXT.")
-            return None
-    return None
+    if uploaded_file.type == "application/pdf":
+        return extract_text_from_pdf(uploaded_file)
+    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        return extract_text_from_docx(uploaded_file)
+    elif uploaded_file.type == "text/plain":
+        return str(uploaded_file.read(), "utf-8")
+    else:
+        st.error("Unsupported file type")
+        return ""
 
-def detect_contact_info(text):
-    name_match = re.search(r"(?i)(?<=Name:)[^\n\r]+", text)
-    email_match = re.search(r"[\w\.-]+@[\w\.-]+", text)
-    phone_match = re.search(r"\+?\d[\d\s\-()]{7,}\d", text)
-    name = name_match.group().strip() if name_match else None
-    email = email_match.group() if email_match else None
-    phone = phone_match.group() if phone_match else None
-    return name, email, phone
+def extract_contact_info(text):
+    email = re.search(r"[\w\.-]+@[\w\.-]+", text)
+    phone = re.search(r"(?<!\d)(\+62|08|62)[\d\s\-]{8,}(?!\d)", text)
+    name_lines = text.strip().splitlines()[:10]  # Assume name is at the top
+    name = next((line.strip() for line in name_lines if len(line.split()) >= 2 and line[0].isupper()), None)
+    return name, email.group() if email else "", phone.group() if phone else ""
+
+def generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_len, name, email, phone, hr_name, hr_role):
+    today_date = datetime.now().strftime("%d %B %Y")
+    hr_info = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Manager"
+    prompt = f"""
+    Write a professional cover letter for the following job. Use today's date: {today_date}.
+    Applicant info:
+    - Name: {name}
+    - Email: {email}
+    - Phone: {phone}
+
+    CV Content:
+    {cv_text}
+
+    Job Info:
+    - Title: {job_title}
+    - Company: {company}
+    - Description: {job_desc}
+    - Requirements: {job_reqs}
+
+    Guidelines:
+    - Use real extracted contact details above. Never include placeholders like [Your Name]
+    - Use proper letter format, enthusiastic tone, clear structure
+    - Avoid generic phrases or self-praising claims
+    - Tailor content to job requirements and match with CV
+    - About {word_len} words
+    - End with a polite call to action
+    - Address letter {hr_info}.
+    """
+    model = genai.GenerativeModel("gemini-2.0-flash")
+    response = model.generate_content(prompt)
+    return response.text
 
 def create_pdf(text):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
     styles = getSampleStyleSheet()
-    body_style = ParagraphStyle('Body', parent=styles['Normal'], fontSize=11, leading=14, alignment=TA_JUSTIFY)
-    story = [Paragraph(p.strip().replace('\n', ' '), body_style) for p in text.split('\n\n') if p.strip()]
-    for _ in story: story.append(Spacer(1, 12))
+    style = ParagraphStyle('Body', parent=styles['Normal'], fontSize=11, leading=14, alignment=TA_JUSTIFY)
+    story = [Paragraph(p.strip().replace('\n', ' '), style) for p in text.split('\n\n') if p.strip()]
+    story = [Spacer(1, 12) if not isinstance(p, Spacer) else p for p in story]
     doc.build(story)
     buffer.seek(0)
     return buffer
 
-def generate_cover_letter(cv_text, job_title, company_name, job_desc, job_reqs, word_length, name, email, phone):
-    today_date = datetime.now().strftime("%d %B %Y")
-    model = genai.GenerativeModel('gemini-2.0-flash')
+# --- UI STARTS HERE ---
+cv_file = st.file_uploader("📄 Upload your CV (PDF/DOCX/TXT)", type=["pdf", "docx", "txt"])
 
-    prompt = f"""
-    You are a professional cover letter writer. Based on the following information, create a compelling, tailored cover letter:
+if cv_file:
+    cv_text = extract_text_from_file(cv_file)
+    name, email, phone = extract_contact_info(cv_text)
 
-    CV:
-    {cv_text}
+    if not name:
+        name = st.text_input("Your Name")
+    if not email:
+        email = st.text_input("Your Email")
+    if not phone:
+        phone = st.text_input("Your Phone Number")
 
-    Job Title: {job_title}
-    Company: {company_name}
-    Job Description: {job_desc}
-    Job Requirements: {job_reqs}
+    job_title = st.text_input("Job Title")
+    company = st.text_input("Company Name")
+    job_desc = st.text_area("Job Description")
+    job_reqs = st.text_area("Job Requirements")
+    word_len = st.slider("Word Count", 150, 500, 250, 50)
+    hr_name = st.text_input("HR Name (optional)")
+    hr_role = st.text_input("HR Role (optional)")
 
-    Candidate Info:
-    Name: {name}
-    Email: {email}
-    Phone: {phone}
-    Date: {today_date}
-
-    Requirements:
-    - {word_length} words approx.
-    - Business letter format
-    - Mention today's date
-    - Reflect candidate's qualifications to job
-    - Include specific examples from CV
-    - Avoid generic/cliché phrases
-    - Show enthusiasm for the role and company
-    """
-
-    response = model.generate_content(prompt)
-    return response.text
-
-# File Upload
-uploaded_file = st.file_uploader("📄 Upload your CV/Resume", type=["pdf", "docx", "txt"])
-
-if uploaded_file:
-    cv_text = extract_text_from_file(uploaded_file)
-    if cv_text:
-        name, email, phone = detect_contact_info(cv_text)
-
-        name = st.text_input("👤 Your Name", value=name if name else "")
-        email = st.text_input("📧 Your Email", value=email if email else "")
-        phone = st.text_input("📱 Your Phone", value=phone if phone else "")
-
-        job_title = st.text_input("💼 Job Title")
-        company_name = st.text_input("🏢 Company Name")
-        job_description = st.text_area("📝 Job Description")
-        job_requirements = st.text_area("✅ Job Requirements")
-        word_length = st.slider("✍️ Desired Word Length", 20, 600, 70)
-
-        if st.button("🚀 Generate Cover Letter"):
-            if all([job_title, company_name, job_description, job_requirements, name, email, phone]):
-                with st.spinner("Generating cover letter..."):
-                    result = generate_cover_letter(cv_text, job_title, company_name, job_description, job_requirements, word_length, name, email, phone)
-                    st.success("✅ Cover letter generated!")
-                    st.text_area("📄 Resulting Cover Letter", result, height=400)
-
-                    pdf_buffer = create_pdf(result)
-                    st.download_button("📥 Download as PDF", pdf_buffer, file_name="cover_letter.pdf")
-            else:
-                st.warning("⚠️ Please fill in all required fields.")
-
-# Sidebar info
-with st.sidebar:
-    st.success("🔑 API Key loaded")
-    st.markdown("---")
-    st.header("ℹ️ About")
-    st.markdown("This tool helps generate personalized cover letters with AI. Upload your CV, describe the job, and let AI handle the writing!")
-
+    if st.button("✨ Generate Cover Letter"):
+        if all([name, email, phone, job_title, company, job_desc, job_reqs]):
+            with st.spinner("Generating cover letter..."):
+                result = generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_len, name, email, phone, hr_name, hr_role)
+                st.markdown("---")
+                st.subheader("📄 Your Cover Letter")
+                st.text_area("Preview", result, height=400)
+                pdf = create_pdf(result)
+                st.download_button("📥 Download PDF", data=pdf, file_name=f"Cover_Letter_{name}.pdf", mime="application/pdf")
+        else:
+            st.warning("❗ Please complete all required fields.")
 
 
 
