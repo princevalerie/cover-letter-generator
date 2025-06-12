@@ -120,6 +120,15 @@ Structure:
 5. **Closing:** Reaffirm interest and politely invite follow-up.
 6. **Signature:** Full name
 
+*Critical Instruction*
+    1. Do not include any placeholder text in square brackets like , [Date], [Company Name],, etc. 
+    2. Use the actual provided information: {company}, etc.
+    3. Do not include any metadata, instructions, or notes in square brackets in the final output.
+    4. The output should be a clean, professional cover letter ready for immediate use.
+    5. Remove any text that appears in square brackets [ ] completely from the final output.
+    6. Always structure the paragrapgh and text allignment like professional cover letter
+    7. Do not include any address and instruction to fill the address
+
 Do not include any personal contact details or headers in final output.
 """
 
