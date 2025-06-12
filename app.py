@@ -97,6 +97,8 @@ def generate_cover_letter(cv_text, job_title, company, job_desc, job_reqs, word_
     - Perkiraan Panjang Kata: {word_len} *(Targetkan sekitar angka ini, fleksibilitas +/- 15% diperbolehkan)*
     
     **Panduan Utama Pembuatan Surat Lamaran:**
+
+    Gunakan bahasa{bahasa}
     
     1.  **Format Surat Profesional:**
         *   **Bagian Kepala:**
@@ -170,9 +172,10 @@ if cv_file:
     company = st.text_input("Company Name")
     job_desc = st.text_area("Job Description")
     job_reqs = st.text_area("Job Requirements")
-    word_len = st.slider("Word Count", 30, 500, 250, 10)
+    word_len = st.slider("Word Count", 30, 500, 70, 10)
     hr_name = st.text_input("HR Name (optional)")
     hr_role = st.text_input("HR Role (optional)")
+    bahasa = st.text_inpuy("Bahasa Cover Letter")
 
     if st.button("✨ Generate Cover Letter"):
         if all([name, email, phone, job_title, company, job_desc, job_reqs]):
