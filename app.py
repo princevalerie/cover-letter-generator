@@ -4,200 +4,136 @@ from PyPDF2 import PdfReader
 import docx
 import os
 from dotenv import load_dotenv
+from datetime import datetime
+import io
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_JUSTIFY
-import io
 
-# Muat variabel lingkungan dari file .env
+# Load environment variables
 load_dotenv()
 
-# --- Konfigurasi Halaman ---
-st.set_page_config(
-    page_title="Cover Letter Generator",
-    page_icon="📝",
-    layout="wide"
-)
+# Configure page
+st.set_page_config(page_title="Cover Letter Generator", page_icon="📝", layout="wide")
 
-# --- Pengaturan API Gemini ---
-try:
-    # Ambil kunci API dari environment variables
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        st.error("❌ Kunci API Gemini tidak ditemukan. Harap atur variabel lingkungan GEMINI_API_KEY.")
-        st.stop()
-    genai.configure(api_key=api_key)
-except Exception as e:
-    st.error(f"❌ Terjadi kesalahan saat mengonfigurasi API Gemini: {e}")
+# Gemini API setup
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    st.error("❌ GEMINI_API_KEY not found in environment variables!")
     st.stop()
 
-# --- Fungsi Bantuan ---
+try:
+    genai.configure(api_key=api_key)
+except Exception as e:
+    st.error(f"❌ Error configuring Gemini API: {str(e)}")
+    st.stop()
+
+st.title("📝 Cover Letter Generator")
+st.markdown("Generate professional cover letters using **Gemini 2.0 Flash**")
+
+# File upload and inputs
+cv_file = st.file_uploader("📎 Upload your CV (PDF, DOCX, TXT)", type=["pdf", "docx", "txt"])
+
+with st.form("form"):
+    job_title = st.text_input("Job Title")
+    company = st.text_input("Company Name")
+    job_desc = st.text_area("Job Description")
+    job_reqs = st.text_area("Job Requirements")
+    word_len = st.slider("Word Count Target", 40, 800, 100)
+    hr_name = st.text_input("HR Name (Optional)")
+    hr_role = st.text_input("HR Role (Optional)")
+    language = st.radio("Language", ["English", "Bahasa Indonesia"])
+    submitted = st.form_submit_button("Generate Cover Letter")
+
+# Helper functions
+def extract_text_from_pdf(file):
+    reader = PdfReader(file)
+    return "\n".join(page.extract_text() for page in reader.pages if page.extract_text())
+
+def extract_text_from_docx(file):
+    doc = docx.Document(file)
+    return "\n".join(p.text for p in doc.paragraphs)
 
 def extract_text(file):
-    """Mengekstrak teks dari file yang diunggah (PDF, DOCX, TXT)."""
-    file_type = file.type
-    try:
-        if file_type == "application/pdf":
-            reader = PdfReader(file)
-            return "\n".join(page.extract_text() for page in reader.pages if page.extract_text())
-        elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-            doc = docx.Document(file)
-            return "\n".join(p.text for p in doc.paragraphs)
-        elif file_type == "text/plain":
-            return file.getvalue().decode("utf-8")
-    except Exception as e:
-        st.error(f"Gagal membaca file: {e}")
-        return None
+    if file.type == "application/pdf":
+        return extract_text_from_pdf(file)
+    elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        return extract_text_from_docx(file)
+    elif file.type == "text/plain":
+        return str(file.read(), "utf-8")
     return ""
 
-def generate_prompt(cv_text, job_title, company, job_desc, job_reqs, word_len, hr_name, hr_role, language):
-    """Membuat prompt yang terstruktur untuk model Gemini."""
-    hr_line = f"kepada {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "Tim Perekrutan"
-    lang = "Bahasa Indonesia" if language == "Bahasa Indonesia" else "English"
+def generate_prompt(cv_text):
+    today = datetime.now().strftime("%d %B %Y")
+    hr_line = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Team"
+    lang = "Indonesian (Bahasa Indonesia)" if language == "Bahasa Indonesia" else "English"
 
     return f"""
-Anda adalah seorang penulis surat lamaran profesional. Tugas Anda adalah membuat surat lamaran yang menarik, profesional, dan disesuaikan menggunakan informasi berikut:
+You are a professional cover letter writer. Your task is to create an engaging, professional, and customized cover letter using the following:
 
-📄 **Resume (analisis untuk pencapaian, keterampilan, dan pengalaman):**
+📅 **Date:** {today}
+
+📄 **Resume (analyze for achievements, skills, and experiences):**
 {cv_text}
 
-💼 **Info Pekerjaan:**
-- Posisi: {job_title}
-- Perusahaan: {company}
-- Deskripsi: {job_desc}
-- Persyaratan: {job_reqs}
+💼 **Job Info:**
+- Position: {job_title}
+- Company: {company}
+- Description: {job_desc}
+- Requirements: {job_reqs}
 
-🎯 **Instruksi:**
-- Bahasa: Tulis surat dalam **{lang}**.
-- Panjang: Target sekitar **{word_len} kata** (+/- 15%).
-- Tujukan kepada: **{hr_line}**
+🎯 **Instructions:**
+- Language: Write the letter in **{lang}**.
+- Length: Target approx. **{word_len} words** (+/- 15%).
+- Address to: **{hr_line}**
 
-📝 **Struktur & Nada:**
-1.  **Salam Pembuka:** Gunakan nama spesifik jika diberikan (misalnya, "Dear Bapak/Ibu X"), atau "Dear Tim Perekrutan".
-2.  **Pendahuluan:** Tunjukkan antusiasme dan kesesuaian untuk peran tersebut.
-3.  **Isi Surat:**
-    - Cocokkan 2–3 persyaratan pekerjaan teratas dengan pencapaian/keterampilan nyata dari CV.
-    - Gunakan contoh nyata dan kuantifikasi jika memungkinkan (misalnya, "meningkatkan efisiensi sebesar 20%").
-    - Sorot nilai apa yang Anda bawa ke {company}.
-4.  **Motivasi:** Jelaskan mengapa Anda ingin bekerja di {company}.
-5.  **Penutup:** Tegaskan kembali minat dan ajak dengan sopan untuk tindak lanjut.
-6.  **Tanda Tangan:** Nama lengkap Anda.
+📝 **Structure & Tone:**
+1. **Salutation:** Use specific name if given (e.g., \"Dear Mr./Ms. X\"), or \"Dear Hiring Manager\".
+2. **Intro:** Show enthusiasm and suitability for the role.
+3. **Body:**
+    - Match top 2–3 job requirements with real achievements/skills from CV.
+    - Use real examples and quantify (e.g., \"increased efficiency by 20%\").
+    - Highlight what value you bring to {company}.
+4. **Motivation:** Optional — why you want to work at {company}.
+5. **Closing:** Reaffirm interest and politely invite follow-up.
+6. **Signature:** Full name
 
-INSTRUKSI KRITIS:
-- Jangan sertakan teks placeholder dalam kurung siku seperti [Nama Anda].
-- Jangan sertakan detail kontak atau alamat apa pun.
-- Output harus berupa surat lamaran yang bersih dan profesional, siap untuk digunakan.
-- Susun paragraf dan ratakan teks seperti surat profesional (rata kanan-kiri).
-
-📌 Hindari menyalin CV. Sebaliknya, sintesis dan tulis surat yang mengalir dan berdampak.
+📌 Avoid copying the CV. Instead, synthesize and write a flowing, impactful letter.
+📌 Do NOT include address, email, phone, or any personal contact details.
 """
 
 def export_pdf(letter_text):
-    """Mengekspor teks surat lamaran ke dalam file PDF."""
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
-    style = ParagraphStyle(name='Justify', parent=styles['Normal'], alignment=TA_JUSTIFY, fontSize=11, leading=14)
-    
-    # Ganti newline ganda dengan satu newline untuk memisahkan paragraf
-    paragraphs = letter_text.replace('\n\n', '\n').split('\n')
-    elements = [Paragraph(p.strip(), style) for p in paragraphs if p.strip()]
-    
+    style = ParagraphStyle(name='Justify', parent=styles['Normal'], alignment=TA_JUSTIFY, fontSize=11)
+    elements = [Paragraph(p.strip(), style) for p in letter_text.split('\n') if p.strip()]
     doc.build(elements)
     buffer.seek(0)
     return buffer
 
-# --- Antarmuka Pengguna (UI) ---
-st.title("📝 Generator Surat Lamaran")
-st.markdown("Buat surat lamaran kerja profesional secara instan menggunakan kekuatan AI dari **Gemini**.")
-st.divider()
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("1. Unggah CV Anda")
-    cv_file = st.file_uploader("Pilih file CV Anda", type=["pdf", "docx", "txt"], label_visibility="collapsed")
-
-with col2:
-    st.subheader("2. Masukkan Detail Pekerjaan")
-    with st.form("job_details_form"):
-        job_title = st.text_input("Posisi yang Dilamar")
-        company = st.text_input("Nama Perusahaan")
-        job_desc = st.text_area("Deskripsi Pekerjaan")
-        job_reqs = st.text_area("Persyaratan Pekerjaan")
-        
-        st.subheader("3. Kustomisasi Surat Lamaran")
-        hr_name = st.text_input("Nama HR / Manajer Perekrutan (Opsional)")
-        hr_role = st.text_input("Jabatan HR (Opsional, cth: Manajer Perekrutan)")
-        language = st.radio("Bahasa Surat", ["Bahasa Indonesia", "English"], horizontal=True)
-        word_len = st.slider("Target Jumlah Kata", 150, 500, 250)
-        
-        submitted = st.form_submit_button("✨ Buat Surat Lamaran", use_container_width=True)
-
-# --- Logika Utama ---
-if submitted:
-    if not cv_file:
-        st.error("⚠️ Harap unggah CV Anda terlebih dahulu.")
-    elif not all([job_title, company, job_desc, job_reqs]):
-        st.error("⚠️ Harap isi semua detail pekerjaan (Posisi, Perusahaan, Deskripsi, dan Persyaratan).")
+# Main logic
+if submitted and cv_file:
+    if not job_title or not company:
+        st.warning("⚠️ Please provide both Job Title and Company Name.")
     else:
-        with st.spinner("Mengekstrak teks dari CV..."):
+        with st.spinner("Extracting and analyzing CV..."):
             cv_text = extract_text(cv_file)
-        
-        if cv_text:
-            st.success("CV berhasil dianalisis.")
-            
-            with st.spinner("Membuat surat lamaran dengan Gemini... Ini mungkin memakan waktu sejenak."):
-                try:
-                    # Buat prompt dengan mempassing semua argumen yang diperlukan
-                    prompt = generate_prompt(
-                        cv_text=cv_text,
-                        job_title=job_title,
-                        company=company,
-                        job_desc=job_desc,
-                        job_reqs=job_reqs,
-                        word_len=word_len,
-                        hr_name=hr_name,
-                        hr_role=hr_role,
-                        language=language
-                    )
 
-                    # Panggil model Gemini
-                    model = genai.GenerativeModel("gemini-1.5-flash")
-                    response = model.generate_content(prompt)
-                    letter = response.text.strip()
+            with st.spinner("Generating cover letter using Gemini..."):
+                prompt = generate_prompt(cv_text)
+                model = genai.GenerativeModel("gemini-2.0-flash")
+                response = model.generate_content(prompt)
+                letter = response.text.strip()
 
-                    # Simpan surat yang dihasilkan ke dalam session state
-                    st.session_state.generated_letter = letter
+                st.subheader("📄 Generated Cover Letter")
+                st.text_area("Preview", letter, height=400)
 
-                except Exception as e:
-                    st.error(f"❌ Gagal menghasilkan surat lamaran: {str(e)}")
-                    st.session_state.generated_letter = None
-
-# Tampilkan hasil jika surat berhasil dibuat
-if "generated_letter" in st.session_state and st.session_state.generated_letter:
-    st.divider()
-    st.subheader("📄 Hasil Surat Lamaran Anda")
-    
-    letter_text = st.session_state.generated_letter
-    st.text_area("Pratinjau", letter_text, height=400, key="preview_area")
-    
-    try:
-        pdf_buffer = export_pdf(letter_text)
-        st.download_button(
-            label="📥 Unduh sebagai PDF",
-            data=pdf_buffer,
-            file_name=f"Surat_Lamaran_{job_title.replace(' ', '_')}_{company.replace(' ', '_')}.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
-    except Exception as e:
-        st.error(f"Gagal membuat PDF: {e}")
-
-# Pesan awal
-if not submitted:
-    st.info("Harap lengkapi formulir di atas dan klik 'Buat Surat Lamaran' untuk memulai.")
+                pdf = export_pdf(letter)
+                st.download_button("📥 Download as PDF", data=pdf, file_name="Cover_Letter.pdf", mime="application/pdf")
+else:
+    st.info("👆 Upload a CV and fill out the form to generate your cover letter.")
 
 
 
