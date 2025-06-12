@@ -1,5 +1,3 @@
-# Full Streamlit Cover Letter Generator (with fallback input for missing contact info)
-
 import streamlit as st
 import google.generativeai as genai
 from PyPDF2 import PdfReader
@@ -67,27 +65,15 @@ def extract_text(file):
         return str(file.read(), "utf-8")
     return ""
 
-# def extract_contact_info(text):
-#     email = re.search(r"[\w\.-]+@[\w\.-]+", text)
-#     phone = re.search(r"(?<!\d)(\+62|08|62)[\d\s\-]{8,}(?!\d)", text)
-#     name = next((line.strip() for line in text.splitlines()[:10] if line and line[0].isupper()), None)
-#     return name, email.group() if email else "", phone.group() if phone else ""
-
 def generate_prompt(cv_text, name, email, phone):
     today = datetime.now().strftime("%d %B %Y")
     hr_line = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Team"
     lang = "Indonesian (Bahasa Indonesia)" if language == "Bahasa Indonesia" else "English"
-    
-    # 👤 **Applicant Info:**
-    # - Name: {name}
-    # - Email: {email}
-    # - Phone: {phone}
 
     return f"""
 You are a professional cover letter writer. Your task is to create an engaging, professional, and customized cover letter using the following:
 
 📅 **Date:** {today}
-
 
 📄 **Resume (analyze for achievements, skills, and experiences):**
 {cv_text}
@@ -140,18 +126,9 @@ def export_pdf(letter_text):
 if submitted and cv_file:
     with st.spinner("Extracting and analyzing CV..."):
         cv_text = extract_text(cv_file)
-        # name, email, phone = extract_contact_info(cv_text)
-
-        # # Manual fallback inputs if missing
-        # if not name:
-        #     name = st.text_input("⚠️ Name not detected, please input manually:")
-        # if not email:
-        #     email = st.text_input("⚠️ Email not detected, please input manually:")
-        # if not phone:
-        #     phone = st.text_input("⚠️ Phone number not detected, please input manually:")
 
         with st.spinner("Generating cover letter using Gemini..."):
-            prompt = generate_prompt(cv_text, name, email, phone)
+            prompt = generate_prompt(cv_text, "", "", "")
             model = genai.GenerativeModel("gemini-2.0-flash")
             response = model.generate_content(prompt)
             letter = response.text.strip()
@@ -161,10 +138,177 @@ if submitted and cv_file:
 
             pdf = export_pdf(letter)
             st.download_button("📥 Download as PDF", data=pdf, file_name="Cover_Letter.pdf", mime="application/pdf")
-    else:
-        st.warning("Please complete the missing contact information.")
 else:
     st.warning("👆click after fill the form")
+
+
+# # Full Streamlit Cover Letter Generator (with fallback input for missing contact info)
+
+# import streamlit as st
+# import google.generativeai as genai
+# from PyPDF2 import PdfReader
+# import docx
+# import os
+# from dotenv import load_dotenv
+# from datetime import datetime
+# import re
+# from reportlab.platypus import SimpleDocTemplate, Paragraph
+# from reportlab.lib.pagesizes import A4
+# from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+# from reportlab.lib.enums import TA_JUSTIFY
+# import io
+
+# # Load environment variables
+# load_dotenv()
+
+# # Configure page
+# st.set_page_config(page_title="Cover Letter Generator", page_icon="📝", layout="wide")
+
+# # Gemini API setup
+# api_key = os.getenv("GEMINI_API_KEY")
+# if not api_key:
+#     st.error("❌ GEMINI_API_KEY not found in environment variables!")
+#     st.stop()
+
+# try:
+#     genai.configure(api_key=api_key)
+# except Exception as e:
+#     st.error(f"❌ Error configuring Gemini API: {str(e)}")
+#     st.stop()
+
+# st.title("📝 Cover Letter Generator")
+# st.markdown("Generate professional cover letters using **Gemini 2.0 Flash**")
+
+# # File upload and inputs
+# cv_file = st.file_uploader("📎 Upload your CV (PDF, DOCX, TXT)", type=["pdf", "docx", "txt"])
+
+# with st.form("form"):
+#     job_title = st.text_input("Job Title")
+#     company = st.text_input("Company Name")
+#     job_desc = st.text_area("Job Description")
+#     job_reqs = st.text_area("Job Requirements")
+#     word_len = st.slider("Word Count Target", 40, 800, 100)
+#     hr_name = st.text_input("HR Name (Optional)")
+#     hr_role = st.text_input("HR Role (Optional)")
+#     language = st.radio("Language", ["English", "Bahasa Indonesia"])
+#     submitted = st.form_submit_button("Generate Cover Letter")
+
+# # Helper functions
+# def extract_text_from_pdf(file):
+#     reader = PdfReader(file)
+#     return "\n".join(page.extract_text() for page in reader.pages if page.extract_text())
+
+# def extract_text_from_docx(file):
+#     doc = docx.Document(file)
+#     return "\n".join(p.text for p in doc.paragraphs)
+
+# def extract_text(file):
+#     if file.type == "application/pdf":
+#         return extract_text_from_pdf(file)
+#     elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+#         return extract_text_from_docx(file)
+#     elif file.type == "text/plain":
+#         return str(file.read(), "utf-8")
+#     return ""
+
+# # def extract_contact_info(text):
+# #     email = re.search(r"[\w\.-]+@[\w\.-]+", text)
+# #     phone = re.search(r"(?<!\d)(\+62|08|62)[\d\s\-]{8,}(?!\d)", text)
+# #     name = next((line.strip() for line in text.splitlines()[:10] if line and line[0].isupper()), None)
+# #     return name, email.group() if email else "", phone.group() if phone else ""
+
+# def generate_prompt(cv_text, name, email, phone):
+#     today = datetime.now().strftime("%d %B %Y")
+#     hr_line = f"to {hr_name}, {hr_role}" if hr_name and hr_role else hr_name or "the Hiring Team"
+#     lang = "Indonesian (Bahasa Indonesia)" if language == "Bahasa Indonesia" else "English"
+    
+#     # 👤 **Applicant Info:**
+#     # - Name: {name}
+#     # - Email: {email}
+#     # - Phone: {phone}
+
+#     return f"""
+# You are a professional cover letter writer. Your task is to create an engaging, professional, and customized cover letter using the following:
+
+# 📅 **Date:** {today}
+
+
+# 📄 **Resume (analyze for achievements, skills, and experiences):**
+# {cv_text}
+
+# 💼 **Job Info:**
+# - Position: {job_title}
+# - Company: {company}
+# - Description: {job_desc}
+# - Requirements: {job_reqs}
+
+# 🎯 **Instructions:**
+# - Language: Write the letter in **{lang}**.
+# - Length: Target approx. **{word_len} words** (+/- 15%).
+# - Address to: **{hr_line}**
+
+# 📝 **Structure & Tone:**
+# 2. **Salutation:** Use specific name if given (e.g., "Dear Mr./Ms. X"), or "Dear Hiring Manager".
+# 3. **Intro:** Show enthusiasm and suitability for the role.
+# 4. **Body:**
+#     - Match top 2–3 job requirements with real achievements/skills from CV.
+#     - Use real examples and quantify (e.g., "increased efficiency by 20%").
+#     - Highlight what value you bring to {company}.
+# 5. **Motivation:** Optional — why you want to work at {company}.
+# 6. **Closing:** Reaffirm interest and politely invite follow-up.
+# 7. **Signature:** Full name
+
+#     CRITICAL INSTRUCTIONS:
+#     1. Do not include any placeholder text in square brackets like , [Date], [Company Name],, etc. 
+#     2. Use the actual provided information: {company}, etc.
+#     3. Do not include any metadata, instructions, or notes in square brackets in the final output.
+#     4. The output should be a clean, professional cover letter ready for immediate use.
+#     5. Remove any text that appears in square brackets [ ] completely from the final output.
+#     6. Always structure the paragrapgh and text allignment like professional cover letter
+#     7. Do not include any address and instruction to fill the address
+
+# 📌 Avoid copying the CV. Instead, synthesize and write a flowing, impactful letter.
+# """
+
+# def export_pdf(letter_text):
+#     buffer = io.BytesIO()
+#     doc = SimpleDocTemplate(buffer, pagesize=A4)
+#     styles = getSampleStyleSheet()
+#     style = ParagraphStyle(name='Justify', parent=styles['Normal'], alignment=TA_JUSTIFY, fontSize=11)
+#     elements = [Paragraph(p.strip(), style) for p in letter_text.split('\n') if p.strip()]
+#     doc.build(elements)
+#     buffer.seek(0)
+#     return buffer
+
+# # Main logic
+# if submitted and cv_file:
+#     with st.spinner("Extracting and analyzing CV..."):
+#         cv_text = extract_text(cv_file)
+#         # name, email, phone = extract_contact_info(cv_text)
+
+#         # # Manual fallback inputs if missing
+#         # if not name:
+#         #     name = st.text_input("⚠️ Name not detected, please input manually:")
+#         # if not email:
+#         #     email = st.text_input("⚠️ Email not detected, please input manually:")
+#         # if not phone:
+#         #     phone = st.text_input("⚠️ Phone number not detected, please input manually:")
+
+#         with st.spinner("Generating cover letter using Gemini..."):
+#             prompt = generate_prompt(cv_text, name, email, phone)
+#             model = genai.GenerativeModel("gemini-2.0-flash")
+#             response = model.generate_content(prompt)
+#             letter = response.text.strip()
+
+#             st.subheader("📄 Generated Cover Letter")
+#             st.text_area("Preview", letter, height=400)
+
+#             pdf = export_pdf(letter)
+#             st.download_button("📥 Download as PDF", data=pdf, file_name="Cover_Letter.pdf", mime="application/pdf")
+#     else:
+#         st.warning("Please complete the missing contact information.")
+# else:
+#     st.warning("👆click after fill the form")
 
 
 
